@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台中點餐系統 (雙功能菜單版)</title>
+  <title>台中點餐系統 (多店家進階版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
@@ -34,7 +34,10 @@
     .btn-secondary { background: var(--secondary-color); color: white; }
     .btn-danger { background: var(--danger-color); color: white; }
     
-    /* 相簿顯示區 */
+    /* 菜單選單樣式 */
+    .store-selector { margin-bottom: 20px; }
+    .store-selector select { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); border: 2px solid var(--primary-color); }
+    
     .menu-display-area {
       position: relative;
       background: #f3f4f6;
@@ -86,11 +89,7 @@
       border-radius: 15px;
       border: 1px solid #eee;
     }
-    .action-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+    .action-row { display: flex; gap: 10px; align-items: center; }
 
     table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 25px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
     th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -109,7 +108,7 @@
 <body>
   <div class="container">
     <header>
-      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">雙功能版</span></h1>
+      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">多店家進階版</span></h1>
       <div id="datetime" class="glass-effect"></div>
     </header>
 
@@ -120,11 +119,15 @@
           <h2 class="card-title">我要點餐</h2>
         </div>
         <form id="orderForm">
+          <div style="margin-bottom: 15px; padding: 10px; background: #eef5f9; border-radius: 10px; color: var(--primary-dark); font-weight: bold;">
+             <i class="fas fa-store"></i> 訂購店家：<span id="displayStoreName">請先選擇右方菜單</span>
+          </div>
+          
           <div class="form-group"><label>您的姓名</label><input type="text" id="name" required placeholder="例如：小明"></div>
           <div class="form-group"><label>餐點名稱</label><input type="text" id="meal" required placeholder="例如：珍奶半糖微冰"></div>
           <div class="form-group"><label>價格</label><input type="number" id="price" required placeholder="例如：60"></div>
           <div class="form-group"><label>備註</label><textarea id="note" rows="2" placeholder="備註事項"></textarea></div>
-          <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane btn-icon"></i>送出訂單</button>
+          <button type="submit" id="submitOrderBtn" class="btn btn-primary" disabled><i class="fas fa-paper-plane btn-icon"></i>送出訂單</button>
         </form>
       </div>
 
@@ -133,36 +136,48 @@
           <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
           <h2 class="card-title">今日菜單</h2>
         </div>
+
+        <div class="store-selector">
+            <label><i class="fas fa-filter"></i> 選擇店家菜單：</label>
+            <select id="storeSelect">
+                <option value="">-- 目前沒有菜單 --</option>
+            </select>
+        </div>
         
         <div class="menu-display-area">
             <button class="nav-btn nav-prev" onclick="prevMenuPage()"><i class="fas fa-chevron-left"></i></button>
             <img id="currentMenuImg" src="" alt="菜單" style="display:none;" />
-            <div id="noMenuText" style="color: #8b99a6; text-align: center;">暫無菜單<br>請使用下方任一種方式新增</div>
+            <div id="noMenuText" style="color: #8b99a6; text-align: center;">暫無此店家的圖片</div>
             <button class="nav-btn nav-next" onclick="nextMenuPage()"><i class="fas fa-chevron-right"></i></button>
         </div>
         <div id="pageIndicator" class="page-indicator">第 0 / 0 頁</div>
         
         <div style="text-align:center; margin-bottom:15px;">
              <button id="deleteCurrentPageBtn" class="btn btn-danger btn-sm" style="display:none; width:auto;" onclick="deleteCurrentMenuPage()">
-                <i class="fas fa-trash-alt btn-icon"></i>刪除目前顯示的這頁
+                <i class="fas fa-trash-alt btn-icon"></i>刪除目前這頁
             </button>
         </div>
 
         <div class="menu-actions">
-            <div style="font-size:0.9rem; font-weight:bold; color:#7c9cbf;">新增菜單方式 1：貼上網址 (無大小限制)</div>
-            <div class="action-row">
-                <input type="text" id="menuUrlInput" placeholder="請貼上圖片連結 (https://...)" style="flex:2;">
-                <button id="addUrlBtn" class="btn btn-primary" style="flex:1; margin-bottom:0;">
-                    <i class="fas fa-link btn-icon"></i>新增網址
-                </button>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="color:#7c9cbf; font-weight:bold;">1. 輸入店家名稱 (新增時必填)</label>
+                <input type="text" id="newStoreNameInput" placeholder="例如：50嵐、麥當勞" style="border: 2px solid #7c9cbf;">
             </div>
 
-            <div style="border-top:1px dashed #ddd; margin: 5px 0;"></div>
+            <div style="font-size:0.9rem; font-weight:bold; color:#666;">2. 選擇上傳方式</div>
+            
+            <div class="action-row">
+                <input type="text" id="menuUrlInput" placeholder="貼上圖片網址..." style="flex:2;">
+                <button id="addUrlBtn" class="btn btn-primary" style="flex:1; margin-bottom:0;">
+                    <i class="fas fa-link btn-icon"></i>存網址
+                </button>
+            </div>
+            
+            <div style="text-align:center; font-size:0.8rem; color:#888;">或是</div>
 
-            <div style="font-size:0.9rem; font-weight:bold; color:#7c9cbf;">新增菜單方式 2：電腦上傳 (限950KB)</div>
             <div class="action-row">
                 <button id="changeImageButton" class="btn btn-secondary" style="width:100%; margin-bottom:0;">
-                    <i class="fas fa-upload btn-icon"></i>選擇圖片上傳
+                    <i class="fas fa-upload btn-icon"></i>電腦上傳圖片 (950KB)
                 </button>
                 <input type="file" id="fileInput" accept="image/*" style="display: none;">
             </div>
@@ -182,7 +197,7 @@
               <th class="checkbox-cell">選</th>
               <th>No.</th>
               <th>已繳費</th>
-              <th>姓名</th>
+              <th>店家</th> <th>姓名</th>
               <th>餐點</th>
               <th>價格</th>
               <th>時間</th>
@@ -261,6 +276,9 @@
             const dateObj = new Date(data.timestamp);
             timeStr = dateObj.toLocaleString('zh-TW', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
           }
+          
+          // 支援舊資料(沒有店家欄位的)
+          const storeDisplay = data.storeName ? `<span style="background:#eef5f9; padding:2px 6px; border-radius:4px; color:#5e86a9; font-size:0.9em;">${data.storeName}</span>` : '<span style="color:#ccc;">-</span>';
 
           row.innerHTML = `
             <td class="checkbox-cell"><input type="checkbox" data-id="${doc.id}"></td>
@@ -268,6 +286,7 @@
             <td style="text-align:center;">
               <input type="checkbox" class="paid-checkbox" ${data.paid ? 'checked' : ''} onchange="togglePaid('${doc.id}', this.checked)">
             </td>
+            <td>${storeDisplay}</td>
             <td>${data.name}</td>
             <td>${data.meal}</td>
             <td>$${data.price}</td>
@@ -280,10 +299,16 @@
       });
     }
 
+    // 送出訂單 (包含自動帶入店家)
     document.getElementById('orderForm').addEventListener('submit', (e) => {
       e.preventDefault();
+      
+      const currentStore = document.getElementById('storeSelect').value;
+      if (!currentStore) return alert("請先在右側選擇一家餐廳菜單！");
+
       const db = firebase.firestore();
       db.collection("orders").add({
+        storeName: currentStore, // ★ 自動帶入店家名稱
         name: document.getElementById('name').value,
         meal: document.getElementById('meal').value,
         price: Number(document.getElementById('price').value),
@@ -291,7 +316,10 @@
         paid: false,
         timestamp: Date.now()
       }).then(() => {
-        document.getElementById('orderForm').reset();
+        document.getElementById('name').value = ''; // 姓名不保留? 看習慣，這邊先清空
+        document.getElementById('meal').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('note').value = '';
         showToast("訂單已送出！");
       }).catch(err => alert("送出失敗: " + err.message));
     });
@@ -300,23 +328,85 @@
       firebase.firestore().collection("orders").doc(id).update({ paid: isPaid });
     }
 
-    // 相簿邏輯
-    let menuDataList = [];
+    // ★★★ 進階相簿邏輯 (分類與顯示) ★★★
+    let allMenuData = []; // 所有資料
+    let currentStoreImages = []; // 當前選中店家的圖片
     let currentMenuIndex = 0;
 
     function listenToMenuImages() {
       firebase.firestore().collection("menu_images").orderBy("timestamp", "asc").onSnapshot(snapshot => {
-        menuDataList = [];
+        allMenuData = [];
         snapshot.forEach(doc => {
-          menuDataList.push({ id: doc.id, ...doc.data() });
+          allMenuData.push({ id: doc.id, ...doc.data() });
         });
         
-        if (currentMenuIndex >= menuDataList.length) {
-          currentMenuIndex = Math.max(0, menuDataList.length - 1);
+        updateStoreDropdown();
+        filterMenuByStore();
+      });
+    }
+
+    // 更新店家下拉選單
+    function updateStoreDropdown() {
+      const select = document.getElementById('storeSelect');
+      const currentVal = select.value;
+      
+      // 提取所有不重複的店家名稱
+      // 如果舊資料沒有 storeName，歸類為 "未分類"
+      const storeSet = new Set();
+      allMenuData.forEach(d => {
+          if(d.storeName) storeSet.add(d.storeName);
+      });
+      
+      const stores = Array.from(storeSet);
+      
+      // 清空選項
+      select.innerHTML = '';
+      
+      if (stores.length === 0) {
+          select.innerHTML = '<option value="">-- 目前沒有菜單 --</option>';
+          document.getElementById('displayStoreName').innerText = "無店家";
+          document.getElementById('submitOrderBtn').disabled = true;
+          return;
+      }
+
+      stores.forEach(store => {
+          const opt = document.createElement('option');
+          opt.value = store;
+          opt.innerText = store;
+          select.appendChild(opt);
+      });
+
+      // 嘗試保持原本選中的店家
+      if (stores.includes(currentVal)) {
+          select.value = currentVal;
+      } else {
+          select.value = stores[0]; // 預設選第一個
+      }
+    }
+
+    // 下拉選單改變時
+    document.getElementById('storeSelect').addEventListener('change', () => {
+        filterMenuByStore();
+    });
+
+    function filterMenuByStore() {
+        const select = document.getElementById('storeSelect');
+        const selectedStore = select.value;
+        
+        if (!selectedStore) {
+            currentStoreImages = [];
+            document.getElementById('displayStoreName').innerText = "無店家";
+            document.getElementById('submitOrderBtn').disabled = true;
+        } else {
+            // 過濾出該店家的圖片
+            currentStoreImages = allMenuData.filter(d => d.storeName === selectedStore);
+            document.getElementById('displayStoreName').innerText = selectedStore;
+            document.getElementById('displayStoreName').style.color = "#e67e22";
+            document.getElementById('submitOrderBtn').disabled = false;
         }
         
+        currentMenuIndex = 0;
         renderCurrentMenu();
-      });
     }
 
     function renderCurrentMenu() {
@@ -324,77 +414,92 @@
       const noText = document.getElementById('noMenuText');
       const indicator = document.getElementById('pageIndicator');
       const delBtn = document.getElementById('deleteCurrentPageBtn');
+      const navPrev = document.querySelector('.nav-prev');
+      const navNext = document.querySelector('.nav-next');
 
-      if (menuDataList.length === 0) {
+      if (currentStoreImages.length === 0) {
         imgEl.style.display = 'none';
         imgEl.src = '';
         noText.style.display = 'block';
         indicator.textContent = '第 0 / 0 頁';
         delBtn.style.display = 'none';
+        navPrev.style.display = 'none';
+        navNext.style.display = 'none';
       } else {
-        const data = menuDataList[currentMenuIndex];
+        const data = currentStoreImages[currentMenuIndex];
         imgEl.src = data.url;
         imgEl.style.display = 'block';
         noText.style.display = 'none';
-        indicator.textContent = `第 ${currentMenuIndex + 1} / ${menuDataList.length} 頁`;
+        indicator.textContent = `第 ${currentMenuIndex + 1} / ${currentStoreImages.length} 頁`;
         delBtn.style.display = 'inline-block';
+        navPrev.style.display = 'flex';
+        navNext.style.display = 'flex';
       }
     }
 
     window.prevMenuPage = function() {
-      if (menuDataList.length > 0) {
-        currentMenuIndex = (currentMenuIndex - 1 + menuDataList.length) % menuDataList.length;
+      if (currentStoreImages.length > 0) {
+        currentMenuIndex = (currentMenuIndex - 1 + currentStoreImages.length) % currentStoreImages.length;
         renderCurrentMenu();
       }
     }
 
     window.nextMenuPage = function() {
-      if (menuDataList.length > 0) {
-        currentMenuIndex = (currentMenuIndex + 1) % menuDataList.length;
+      if (currentStoreImages.length > 0) {
+        currentMenuIndex = (currentMenuIndex + 1) % currentStoreImages.length;
         renderCurrentMenu();
       }
     }
 
     window.deleteCurrentMenuPage = function() {
-      if (menuDataList.length === 0) return;
+      if (currentStoreImages.length === 0) return;
       const pwd = prompt("請輸入密碼");
       if (pwd !== '22913577') return alert("密碼錯誤");
 
-      const docId = menuDataList[currentMenuIndex].id;
+      const docId = currentStoreImages[currentMenuIndex].id;
       firebase.firestore().collection("menu_images").doc(docId).delete()
         .then(() => showToast("已刪除此頁菜單"))
         .catch(err => alert("刪除失敗: " + err.message));
     }
 
-    // ★★★ 方式 1：新增網址 ★★★
+    // ★★★ 新增：上傳時強制帶入店家名稱 ★★★
+    
+    // 方式 1：新增網址
     document.getElementById('addUrlBtn').addEventListener('click', () => {
+        const storeName = document.getElementById('newStoreNameInput').value.trim();
         const url = document.getElementById('menuUrlInput').value;
-        if (!url) return alert("請先貼上網址！");
         
-        showToast("新增網址中...", "info");
+        if (!storeName) return alert("請務必輸入「店家名稱」，系統才能分類喔！");
+        if (!url) return alert("請貼上網址！");
+        
+        showToast("新增中...", "info");
         firebase.firestore().collection("menu_images").add({
+            storeName: storeName, // 存入店家名稱
             url: url,
             timestamp: Date.now()
         })
         .then(() => {
-            showToast("網址圖片新增成功！");
+            showToast("新增成功！");
             document.getElementById('menuUrlInput').value = '';
-            currentMenuIndex = menuDataList.length; // 跳到最新那張
+            // 如果剛新增的店家不是目前選的，可以考慮自動切換，這裡先保持簡單
         })
         .catch(err => alert("新增失敗: " + err.message));
     });
 
-    // ★★★ 方式 2：上傳圖片 ★★★
+    // 方式 2：上傳圖片
     document.getElementById('changeImageButton').addEventListener('click', () => {
+      const storeName = document.getElementById('newStoreNameInput').value.trim();
+      if (!storeName) return alert("請務必輸入「店家名稱」，系統才能分類喔！");
       document.getElementById('fileInput').click();
     });
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
+      const storeName = document.getElementById('newStoreNameInput').value.trim();
       const file = e.target.files[0];
       if (!file) return;
 
       if (file.size > 950 * 1024) { 
-        alert("圖片超過 950KB！請改用「貼上網址」功能，或是先壓縮圖片再上傳。");
+        alert("圖片超過 950KB！請改用網址或壓縮後上傳。");
         return;
       }
 
@@ -403,19 +508,17 @@
       reader.onload = function(event) {
         const base64String = event.target.result; 
         firebase.firestore().collection("menu_images").add({
+          storeName: storeName, // 存入店家名稱
           url: base64String,
           timestamp: Date.now()
         })
-        .then(() => { 
-            showToast("上傳成功！"); 
-            currentMenuIndex = menuDataList.length; 
-        })
+        .then(() => { showToast("上傳成功！"); })
         .catch(err => alert("上傳失敗: " + err.message));
       };
       reader.readAsDataURL(file);
     });
 
-    // 刪除選取
+    // 刪除與清空
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
@@ -428,7 +531,6 @@
       batch.commit().then(() => showToast("刪除成功"));
     });
 
-    // 全部清空
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
       const pwd = prompt("請輸入密碼");
@@ -440,15 +542,16 @@
       }).then(() => showToast("全部清空成功"));
     });
 
-    // 匯出 Excel
+    // 匯出 Excel (新增店家欄位)
     document.getElementById('exportButton').addEventListener('click', () => {
-      let csv = "\uFEFFNo.,已繳費,姓名,餐點,價格,時間,備註\n"; 
+      let csv = "\uFEFFNo.,已繳費,店家,姓名,餐點,價格,時間,備註\n"; 
       const rows = document.querySelectorAll('#orderTable tbody tr');
       let i = rows.length;
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
         const paid = cols[2].querySelector('input').checked ? '是' : '否';
-        csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText},${cols[7].innerText}\n`;
+        // 0:Chk, 1:No, 2:Paid, 3:Store, 4:Name, 5:Meal, 6:Price, 7:Time, 8:Note
+        csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText},${cols[7].innerText},${cols[8].innerText}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
