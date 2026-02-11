@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台中點餐系統 (多店家進階版)</title>
+  <title>台中點餐系統 (密碼隱藏版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
-    /* 樣式區 */
+    /* 樣式區 (維持不變) */
     :root { --primary-color: #7c9cbf; --primary-dark: #5e86a9; --secondary-color: #f6ae99; --accent-color: #98c9b2; --background-color: #f9f9f9; --card-bg: #ffffff; --text-color: #4a4a4a; --text-light: #8b99a6; --border-color: #e9ecef; --success-color: #98c9b2; --danger-color: #e5989b; --shadow: 0 8px 30px rgba(0, 0, 0, 0.04); --radius: 20px; --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s; }
     .fullscreen-overlay.active { opacity: 1; visibility: visible; }
@@ -34,7 +34,6 @@
     .btn-secondary { background: var(--secondary-color); color: white; }
     .btn-danger { background: var(--danger-color); color: white; }
     
-    /* 菜單選單樣式 */
     .store-selector { margin-bottom: 20px; }
     .store-selector select { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); border: 2px solid var(--primary-color); }
     
@@ -108,7 +107,7 @@
 <body>
   <div class="container">
     <header>
-      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">多店家進階版</span></h1>
+      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">密碼隱藏版</span></h1>
       <div id="datetime" class="glass-effect"></div>
     </header>
 
@@ -197,7 +196,8 @@
               <th class="checkbox-cell">選</th>
               <th>No.</th>
               <th>已繳費</th>
-              <th>店家</th> <th>姓名</th>
+              <th>店家</th>
+              <th>姓名</th>
               <th>餐點</th>
               <th>價格</th>
               <th>時間</th>
@@ -277,7 +277,6 @@
             timeStr = dateObj.toLocaleString('zh-TW', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
           }
           
-          // 支援舊資料(沒有店家欄位的)
           const storeDisplay = data.storeName ? `<span style="background:#eef5f9; padding:2px 6px; border-radius:4px; color:#5e86a9; font-size:0.9em;">${data.storeName}</span>` : '<span style="color:#ccc;">-</span>';
 
           row.innerHTML = `
@@ -299,7 +298,6 @@
       });
     }
 
-    // 送出訂單 (包含自動帶入店家)
     document.getElementById('orderForm').addEventListener('submit', (e) => {
       e.preventDefault();
       
@@ -308,7 +306,7 @@
 
       const db = firebase.firestore();
       db.collection("orders").add({
-        storeName: currentStore, // ★ 自動帶入店家名稱
+        storeName: currentStore, 
         name: document.getElementById('name').value,
         meal: document.getElementById('meal').value,
         price: Number(document.getElementById('price').value),
@@ -316,7 +314,7 @@
         paid: false,
         timestamp: Date.now()
       }).then(() => {
-        document.getElementById('name').value = ''; // 姓名不保留? 看習慣，這邊先清空
+        document.getElementById('name').value = ''; 
         document.getElementById('meal').value = '';
         document.getElementById('price').value = '';
         document.getElementById('note').value = '';
@@ -328,9 +326,9 @@
       firebase.firestore().collection("orders").doc(id).update({ paid: isPaid });
     }
 
-    // ★★★ 進階相簿邏輯 (分類與顯示) ★★★
-    let allMenuData = []; // 所有資料
-    let currentStoreImages = []; // 當前選中店家的圖片
+    // 相簿邏輯
+    let allMenuData = []; 
+    let currentStoreImages = []; 
     let currentMenuIndex = 0;
 
     function listenToMenuImages() {
@@ -339,27 +337,17 @@
         snapshot.forEach(doc => {
           allMenuData.push({ id: doc.id, ...doc.data() });
         });
-        
         updateStoreDropdown();
         filterMenuByStore();
       });
     }
 
-    // 更新店家下拉選單
     function updateStoreDropdown() {
       const select = document.getElementById('storeSelect');
       const currentVal = select.value;
-      
-      // 提取所有不重複的店家名稱
-      // 如果舊資料沒有 storeName，歸類為 "未分類"
       const storeSet = new Set();
-      allMenuData.forEach(d => {
-          if(d.storeName) storeSet.add(d.storeName);
-      });
-      
+      allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); });
       const stores = Array.from(storeSet);
-      
-      // 清空選項
       select.innerHTML = '';
       
       if (stores.length === 0) {
@@ -368,23 +356,15 @@
           document.getElementById('submitOrderBtn').disabled = true;
           return;
       }
-
       stores.forEach(store => {
           const opt = document.createElement('option');
           opt.value = store;
           opt.innerText = store;
           select.appendChild(opt);
       });
-
-      // 嘗試保持原本選中的店家
-      if (stores.includes(currentVal)) {
-          select.value = currentVal;
-      } else {
-          select.value = stores[0]; // 預設選第一個
-      }
+      if (stores.includes(currentVal)) { select.value = currentVal; } else { select.value = stores[0]; }
     }
 
-    // 下拉選單改變時
     document.getElementById('storeSelect').addEventListener('change', () => {
         filterMenuByStore();
     });
@@ -392,19 +372,16 @@
     function filterMenuByStore() {
         const select = document.getElementById('storeSelect');
         const selectedStore = select.value;
-        
         if (!selectedStore) {
             currentStoreImages = [];
             document.getElementById('displayStoreName').innerText = "無店家";
             document.getElementById('submitOrderBtn').disabled = true;
         } else {
-            // 過濾出該店家的圖片
             currentStoreImages = allMenuData.filter(d => d.storeName === selectedStore);
             document.getElementById('displayStoreName').innerText = selectedStore;
             document.getElementById('displayStoreName').style.color = "#e67e22";
             document.getElementById('submitOrderBtn').disabled = false;
         }
-        
         currentMenuIndex = 0;
         renderCurrentMenu();
     }
@@ -451,10 +428,12 @@
       }
     }
 
+    // ★★★ 密碼保護：刪除單頁菜單 ★★★
     window.deleteCurrentMenuPage = function() {
       if (currentStoreImages.length === 0) return;
       const pwd = prompt("請輸入密碼");
-      if (pwd !== '22913577') return alert("密碼錯誤");
+      // 使用 Base64 編碼檢查 (MjI5MTM1Nzc= 等於 22913577)
+      if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
 
       const docId = currentStoreImages[currentMenuIndex].id;
       firebase.firestore().collection("menu_images").doc(docId).delete()
@@ -462,34 +441,30 @@
         .catch(err => alert("刪除失敗: " + err.message));
     }
 
-    // ★★★ 新增：上傳時強制帶入店家名稱 ★★★
-    
-    // 方式 1：新增網址
+    // 新增網址
     document.getElementById('addUrlBtn').addEventListener('click', () => {
         const storeName = document.getElementById('newStoreNameInput').value.trim();
         const url = document.getElementById('menuUrlInput').value;
-        
-        if (!storeName) return alert("請務必輸入「店家名稱」，系統才能分類喔！");
+        if (!storeName) return alert("請務必輸入「店家名稱」！");
         if (!url) return alert("請貼上網址！");
         
         showToast("新增中...", "info");
         firebase.firestore().collection("menu_images").add({
-            storeName: storeName, // 存入店家名稱
+            storeName: storeName, 
             url: url,
             timestamp: Date.now()
         })
         .then(() => {
             showToast("新增成功！");
             document.getElementById('menuUrlInput').value = '';
-            // 如果剛新增的店家不是目前選的，可以考慮自動切換，這裡先保持簡單
         })
         .catch(err => alert("新增失敗: " + err.message));
     });
 
-    // 方式 2：上傳圖片
+    // 上傳圖片
     document.getElementById('changeImageButton').addEventListener('click', () => {
       const storeName = document.getElementById('newStoreNameInput').value.trim();
-      if (!storeName) return alert("請務必輸入「店家名稱」，系統才能分類喔！");
+      if (!storeName) return alert("請務必輸入「店家名稱」！");
       document.getElementById('fileInput').click();
     });
 
@@ -508,7 +483,7 @@
       reader.onload = function(event) {
         const base64String = event.target.result; 
         firebase.firestore().collection("menu_images").add({
-          storeName: storeName, // 存入店家名稱
+          storeName: storeName, 
           url: base64String,
           timestamp: Date.now()
         })
@@ -518,12 +493,14 @@
       reader.readAsDataURL(file);
     });
 
-    // 刪除與清空
+    // ★★★ 密碼保護：刪除選取 ★★★
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
       const pwd = prompt("請輸入密碼");
-      if (pwd !== '22913577') return alert("密碼錯誤");
+      // 使用 Base64 編碼檢查
+      if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
+      
       const batch = firebase.firestore().batch();
       checks.forEach(chk => {
         batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id));
@@ -531,10 +508,13 @@
       batch.commit().then(() => showToast("刪除成功"));
     });
 
+    // ★★★ 密碼保護：全部清空 ★★★
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
       const pwd = prompt("請輸入密碼");
-      if (pwd !== '22913577') return alert("密碼錯誤");
+      // 使用 Base64 編碼檢查
+      if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
+      
       firebase.firestore().collection("orders").get().then(snapshot => {
         const batch = firebase.firestore().batch();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -542,7 +522,6 @@
       }).then(() => showToast("全部清空成功"));
     });
 
-    // 匯出 Excel (新增店家欄位)
     document.getElementById('exportButton').addEventListener('click', () => {
       let csv = "\uFEFFNo.,已繳費,店家,姓名,餐點,價格,時間,備註\n"; 
       const rows = document.querySelectorAll('#orderTable tbody tr');
@@ -550,7 +529,6 @@
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
         const paid = cols[2].querySelector('input').checked ? '是' : '否';
-        // 0:Chk, 1:No, 2:Paid, 3:Store, 4:Name, 5:Meal, 6:Price, 7:Time, 8:Note
         csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText},${cols[7].innerText},${cols[8].innerText}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
