@@ -107,7 +107,7 @@
 <body>
   <div class="container">
     <header>
-      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;"></span></h1>
+      <h1 class="app-title">台中點餐系統</h1>
       <div id="datetime" class="glass-effect"></div>
     </header>
 
@@ -428,11 +428,10 @@
       }
     }
 
-    // ★★★ 密碼保護：刪除單頁菜單 ★★★
+    // 密碼保護：刪除單頁菜單 (Base64)
     window.deleteCurrentMenuPage = function() {
       if (currentStoreImages.length === 0) return;
       const pwd = prompt("請輸入密碼");
-      // 使用 Base64 編碼檢查 (MjI5MTM1Nzc= 等於 22913577)
       if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
 
       const docId = currentStoreImages[currentMenuIndex].id;
@@ -493,12 +492,11 @@
       reader.readAsDataURL(file);
     });
 
-    // ★★★ 密碼保護：刪除選取 ★★★
+    // 密碼保護：刪除選取
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
       const pwd = prompt("請輸入密碼");
-      // 使用 Base64 編碼檢查
       if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
       
       const batch = firebase.firestore().batch();
@@ -508,11 +506,10 @@
       batch.commit().then(() => showToast("刪除成功"));
     });
 
-    // ★★★ 密碼保護：全部清空 ★★★
+    // 密碼保護：全部清空
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
       const pwd = prompt("請輸入密碼");
-      // 使用 Base64 編碼檢查
       if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
       
       firebase.firestore().collection("orders").get().then(snapshot => {
@@ -559,4 +556,3 @@
   </script>
 </body>
 </html>
-
