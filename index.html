@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台中點餐系統 (正式版)</title>
+  <title>台中點餐系統 (雙功能菜單版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
-    /* 樣式保持不變 */
+    /* 樣式區 */
     :root { --primary-color: #7c9cbf; --primary-dark: #5e86a9; --secondary-color: #f6ae99; --accent-color: #98c9b2; --background-color: #f9f9f9; --card-bg: #ffffff; --text-color: #4a4a4a; --text-light: #8b99a6; --border-color: #e9ecef; --success-color: #98c9b2; --danger-color: #e5989b; --shadow: 0 8px 30px rgba(0, 0, 0, 0.04); --radius: 20px; --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s; }
     .fullscreen-overlay.active { opacity: 1; visibility: visible; }
@@ -33,8 +33,65 @@
     .btn-primary:hover { background: var(--primary-dark); transform: translateY(-3px); }
     .btn-secondary { background: var(--secondary-color); color: white; }
     .btn-danger { background: var(--danger-color); color: white; }
-    .menu-container { width: 100%; height: 400px; margin-bottom: 25px; border-radius: var(--radius); overflow: hidden; background: #f3f4f6; display: flex; justify-content: center; align-items: center; position: relative; }
-    .menu-image img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer; }
+    
+    /* 相簿顯示區 */
+    .menu-display-area {
+      position: relative;
+      background: #f3f4f6;
+      border-radius: var(--radius);
+      min-height: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      margin-bottom: 15px;
+      border: 1px solid #eee;
+    }
+    .menu-display-area img {
+      max-width: 100%;
+      max-height: 600px;
+      object-fit: contain;
+      cursor: pointer;
+    }
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2rem;
+      transition: 0.2s;
+      z-index: 10;
+    }
+    .nav-btn:hover { background: var(--primary-color); }
+    .nav-prev { left: 10px; }
+    .nav-next { right: 10px; }
+    
+    .page-indicator { text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary-color); }
+    
+    .menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 15px;
+      border: 1px solid #eee;
+    }
+    .action-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
     table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 25px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
     th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
     th { background: var(--primary-color); color: white; }
@@ -46,13 +103,13 @@
     .toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
     .toast { padding: 16px 24px; border-radius: 18px; margin-bottom: 16px; color: white; box-shadow: 0 8px 30px rgba(0,0,0,0.1); animation: slideIn 0.3s ease forwards; background: rgba(152, 201, 178, 0.9); }
     @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    @media (max-width: 768px) { .content-wrapper { grid-template-columns: 1fr; } table { font-size: 0.9rem; } th, td { padding: 8px; } }
+    @media (max-width: 768px) { .content-wrapper { grid-template-columns: 1fr; } table { font-size: 0.9rem; } th, td { padding: 8px; } .action-row { flex-direction: column; } }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">連線版</span></h1>
+      <h1 class="app-title">台中點餐系統 <span style="font-size:0.5em; background:#f6c177; color:white; padding:4px 8px; border-radius:10px; vertical-align:middle;">雙功能版</span></h1>
       <div id="datetime" class="glass-effect"></div>
     </header>
 
@@ -76,18 +133,39 @@
           <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
           <h2 class="card-title">今日菜單</h2>
         </div>
-        <div class="menu-container">
-          <div class="menu-image">
-            <img id="menuImage" src="" alt="請設定菜單" style="display:none;" />
-            <div id="noMenuText" style="color: #8b99a6; text-align: center;">
-              暫無菜單<br>請點擊下方上傳
-            </div>
-          </div>
+        
+        <div class="menu-display-area">
+            <button class="nav-btn nav-prev" onclick="prevMenuPage()"><i class="fas fa-chevron-left"></i></button>
+            <img id="currentMenuImg" src="" alt="菜單" style="display:none;" />
+            <div id="noMenuText" style="color: #8b99a6; text-align: center;">暫無菜單<br>請使用下方任一種方式新增</div>
+            <button class="nav-btn nav-next" onclick="nextMenuPage()"><i class="fas fa-chevron-right"></i></button>
         </div>
-        <button id="changeImageButton" class="btn btn-secondary"><i class="fas fa-upload btn-icon"></i>從電腦上傳圖片</button>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
-        <div style="text-align:center; margin-top:10px; font-size:0.9rem; color:#888;">
-             (支援 1MB 以下圖片)
+        <div id="pageIndicator" class="page-indicator">第 0 / 0 頁</div>
+        
+        <div style="text-align:center; margin-bottom:15px;">
+             <button id="deleteCurrentPageBtn" class="btn btn-danger btn-sm" style="display:none; width:auto;" onclick="deleteCurrentMenuPage()">
+                <i class="fas fa-trash-alt btn-icon"></i>刪除目前顯示的這頁
+            </button>
+        </div>
+
+        <div class="menu-actions">
+            <div style="font-size:0.9rem; font-weight:bold; color:#7c9cbf;">新增菜單方式 1：貼上網址 (無大小限制)</div>
+            <div class="action-row">
+                <input type="text" id="menuUrlInput" placeholder="請貼上圖片連結 (https://...)" style="flex:2;">
+                <button id="addUrlBtn" class="btn btn-primary" style="flex:1; margin-bottom:0;">
+                    <i class="fas fa-link btn-icon"></i>新增網址
+                </button>
+            </div>
+
+            <div style="border-top:1px dashed #ddd; margin: 5px 0;"></div>
+
+            <div style="font-size:0.9rem; font-weight:bold; color:#7c9cbf;">新增菜單方式 2：電腦上傳 (限950KB)</div>
+            <div class="action-row">
+                <button id="changeImageButton" class="btn btn-secondary" style="width:100%; margin-bottom:0;">
+                    <i class="fas fa-upload btn-icon"></i>選擇圖片上傳
+                </button>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
         </div>
       </div>
     </div>
@@ -151,7 +229,7 @@
       console.log("Firebase 連線成功");
       showToast("系統連線成功！");
       listenToOrders();
-      listenToMenu();
+      listenToMenuImages(); 
     } catch (e) {
       console.error(e);
       alert("連線失敗！" + e.message);
@@ -166,7 +244,7 @@
     setInterval(updateDateTime, 1000);
     updateDateTime();
 
-    // 監聽訂單
+    // 訂單邏輯
     function listenToOrders() {
       const db = firebase.firestore();
       db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
@@ -181,13 +259,7 @@
           let timeStr = "";
           if(data.timestamp){
             const dateObj = new Date(data.timestamp);
-            timeStr = dateObj.toLocaleString('zh-TW', {
-              month: '2-digit', 
-              day: '2-digit', 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: false
-            });
+            timeStr = dateObj.toLocaleString('zh-TW', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
           }
 
           row.innerHTML = `
@@ -228,17 +300,91 @@
       firebase.firestore().collection("orders").doc(id).update({ paid: isPaid });
     }
 
-    function listenToMenu() {
-      firebase.firestore().collection("settings").doc("menu").onSnapshot(doc => {
-        if (doc.exists && doc.data().url) {
-          document.getElementById('menuImage').src = doc.data().url;
-          document.getElementById('menuImage').style.display = 'block';
-          document.getElementById('noMenuText').style.display = 'none';
+    // 相簿邏輯
+    let menuDataList = [];
+    let currentMenuIndex = 0;
+
+    function listenToMenuImages() {
+      firebase.firestore().collection("menu_images").orderBy("timestamp", "asc").onSnapshot(snapshot => {
+        menuDataList = [];
+        snapshot.forEach(doc => {
+          menuDataList.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (currentMenuIndex >= menuDataList.length) {
+          currentMenuIndex = Math.max(0, menuDataList.length - 1);
         }
+        
+        renderCurrentMenu();
       });
     }
 
-    // 上傳圖片
+    function renderCurrentMenu() {
+      const imgEl = document.getElementById('currentMenuImg');
+      const noText = document.getElementById('noMenuText');
+      const indicator = document.getElementById('pageIndicator');
+      const delBtn = document.getElementById('deleteCurrentPageBtn');
+
+      if (menuDataList.length === 0) {
+        imgEl.style.display = 'none';
+        imgEl.src = '';
+        noText.style.display = 'block';
+        indicator.textContent = '第 0 / 0 頁';
+        delBtn.style.display = 'none';
+      } else {
+        const data = menuDataList[currentMenuIndex];
+        imgEl.src = data.url;
+        imgEl.style.display = 'block';
+        noText.style.display = 'none';
+        indicator.textContent = `第 ${currentMenuIndex + 1} / ${menuDataList.length} 頁`;
+        delBtn.style.display = 'inline-block';
+      }
+    }
+
+    window.prevMenuPage = function() {
+      if (menuDataList.length > 0) {
+        currentMenuIndex = (currentMenuIndex - 1 + menuDataList.length) % menuDataList.length;
+        renderCurrentMenu();
+      }
+    }
+
+    window.nextMenuPage = function() {
+      if (menuDataList.length > 0) {
+        currentMenuIndex = (currentMenuIndex + 1) % menuDataList.length;
+        renderCurrentMenu();
+      }
+    }
+
+    window.deleteCurrentMenuPage = function() {
+      if (menuDataList.length === 0) return;
+      const pwd = prompt("請輸入密碼");
+      if (pwd !== '22913577') return alert("密碼錯誤");
+
+      const docId = menuDataList[currentMenuIndex].id;
+      firebase.firestore().collection("menu_images").doc(docId).delete()
+        .then(() => showToast("已刪除此頁菜單"))
+        .catch(err => alert("刪除失敗: " + err.message));
+    }
+
+    // ★★★ 方式 1：新增網址 ★★★
+    document.getElementById('addUrlBtn').addEventListener('click', () => {
+        const url = document.getElementById('menuUrlInput').value;
+        if (!url) return alert("請先貼上網址！");
+        
+        showToast("新增網址中...", "info");
+        firebase.firestore().collection("menu_images").add({
+            url: url,
+            timestamp: Date.now()
+        })
+        .then(() => {
+            showToast("網址圖片新增成功！");
+            document.getElementById('menuUrlInput').value = '';
+            currentMenuIndex = menuDataList.length; // 跳到最新那張
+        })
+        .catch(err => alert("新增失敗: " + err.message));
+    });
+
+    // ★★★ 方式 2：上傳圖片 ★★★
     document.getElementById('changeImageButton').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -247,32 +393,34 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      if (file.size > 800 * 1024) { 
-        alert("圖片太大了！請使用小一點的圖片 (建議 800KB 以下)。");
+      if (file.size > 950 * 1024) { 
+        alert("圖片超過 950KB！請改用「貼上網址」功能，或是先壓縮圖片再上傳。");
         return;
       }
 
-      showToast("圖片處理中...", "info");
-      
+      showToast("圖片上傳中...", "info");
       const reader = new FileReader();
       reader.onload = function(event) {
         const base64String = event.target.result; 
-        
-        firebase.firestore().collection("settings").doc("menu").set({ url: base64String })
-          .then(() => { showToast("菜單圖片上傳成功！"); })
-          .catch(err => alert("上傳失敗: " + err.message));
+        firebase.firestore().collection("menu_images").add({
+          url: base64String,
+          timestamp: Date.now()
+        })
+        .then(() => { 
+            showToast("上傳成功！"); 
+            currentMenuIndex = menuDataList.length; 
+        })
+        .catch(err => alert("上傳失敗: " + err.message));
       };
       reader.readAsDataURL(file);
     });
 
-    // 刪除與清空 (已更新密碼且移除提示)
+    // 刪除選取
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
-      
-      const pwd = prompt("請輸入密碼"); // 移除提示文字
+      const pwd = prompt("請輸入密碼");
       if (pwd !== '22913577') return alert("密碼錯誤");
-      
       const batch = firebase.firestore().batch();
       checks.forEach(chk => {
         batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id));
@@ -280,12 +428,11 @@
       batch.commit().then(() => showToast("刪除成功"));
     });
 
+    // 全部清空
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
-      
-      const pwd = prompt("請輸入密碼"); // 移除提示文字
+      const pwd = prompt("請輸入密碼");
       if (pwd !== '22913577') return alert("密碼錯誤");
-      
       firebase.firestore().collection("orders").get().then(snapshot => {
         const batch = firebase.firestore().batch();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -319,7 +466,7 @@
       setTimeout(() => div.remove(), 3000);
     }
 
-    document.getElementById('menuImage').addEventListener('click', function() {
+    document.getElementById('currentMenuImg').addEventListener('click', function() {
       if(this.src) {
         document.getElementById('fullscreenImage').src = this.src;
         document.getElementById('fullscreenOverlay').classList.add('active');
