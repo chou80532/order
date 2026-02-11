@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台中點餐系統 (完美連線版)</title>
+  <title>台中點餐系統 (連線版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
@@ -107,6 +107,7 @@
               <th>姓名</th>
               <th>餐點</th>
               <th>價格</th>
+              <th>時間</th>
               <th>備註</th>
             </tr>
           </thead>
@@ -134,7 +135,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
   <script>
-    // ⚠️ 已經填入你的鑰匙
+    // 你的鑰匙已填入
     const firebaseConfig = {
       apiKey: "AIzaSyCQ6dico4o8QYUTEwqPs378QG5D3o_4htc",
       authDomain: "taichung-order.firebaseapp.com",
@@ -154,7 +155,7 @@
       listenToMenu();
     } catch (e) {
       console.error(e);
-      alert("連線失敗！請檢查 firebaseConfig。" + e.message);
+      alert("連線失敗！" + e.message);
     }
 
     function updateDateTime() {
@@ -177,6 +178,20 @@
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
           const row = tbody.insertRow(0);
+          
+          // 轉換時間格式 (只顯示 月/日 時:分，比較簡潔)
+          let timeStr = "";
+          if(data.timestamp){
+            const dateObj = new Date(data.timestamp);
+            timeStr = dateObj.toLocaleString('zh-TW', {
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false
+            });
+          }
+
           row.innerHTML = `
             <td class="checkbox-cell"><input type="checkbox" data-id="${doc.id}"></td>
             <td>${index--}</td>
@@ -186,6 +201,7 @@
             <td>${data.name}</td>
             <td>${data.meal}</td>
             <td>$${data.price}</td>
+            <td style="font-size:0.9em; color:#666;">${timeStr}</td>
             <td style="color:#888; font-size:0.9em;">${data.note || ''}</td>
           `;
           total += Number(data.price);
@@ -224,7 +240,7 @@
       });
     }
 
-    // ★★★ 上傳圖片功能 (已移除密碼) ★★★
+    // 上傳圖片 (無密碼版)
     document.getElementById('changeImageButton').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -233,13 +249,11 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      // 檢查圖片大小 (建議 800KB 以下)
       if (file.size > 800 * 1024) { 
         alert("圖片太大了！請使用小一點的圖片 (建議 800KB 以下)。");
         return;
       }
 
-      // 這裡直接上傳，不詢問密碼
       showToast("圖片處理中...", "info");
       
       const reader = new FileReader();
@@ -253,7 +267,7 @@
       reader.readAsDataURL(file);
     });
 
-    // 刪除與清空 (保留密碼以防誤刪)
+    // 刪除與清空
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
@@ -277,15 +291,16 @@
       }).then(() => showToast("全部清空成功"));
     });
 
-    // 匯出 Excel
+    // 匯出 Excel (已加入時間欄位)
     document.getElementById('exportButton').addEventListener('click', () => {
-      let csv = "\uFEFFNo.,已繳費,姓名,餐點,價格,備註\n"; 
+      let csv = "\uFEFFNo.,已繳費,姓名,餐點,價格,時間,備註\n"; 
       const rows = document.querySelectorAll('#orderTable tbody tr');
       let i = rows.length;
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
         const paid = cols[2].querySelector('input').checked ? '是' : '否';
-        csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText}\n`;
+        // 欄位順序: 0:Chk, 1:No, 2:Paid, 3:Name, 4:Meal, 5:Price, 6:Time, 7:Note
+        csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText},${cols[7].innerText}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
