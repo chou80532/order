@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台中點餐系統 (連線版)</title>
+  <title>台中點餐系統 (正式版)</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
@@ -135,7 +135,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
   <script>
-    // 你的鑰匙已填入
     const firebaseConfig = {
       apiKey: "AIzaSyCQ6dico4o8QYUTEwqPs378QG5D3o_4htc",
       authDomain: "taichung-order.firebaseapp.com",
@@ -179,7 +178,6 @@
           const data = doc.data();
           const row = tbody.insertRow(0);
           
-          // 轉換時間格式 (只顯示 月/日 時:分，比較簡潔)
           let timeStr = "";
           if(data.timestamp){
             const dateObj = new Date(data.timestamp);
@@ -240,7 +238,7 @@
       });
     }
 
-    // 上傳圖片 (無密碼版)
+    // 上傳圖片
     document.getElementById('changeImageButton').addEventListener('click', () => {
       document.getElementById('fileInput').click();
     });
@@ -267,12 +265,14 @@
       reader.readAsDataURL(file);
     });
 
-    // 刪除與清空
+    // 刪除與清空 (已更新密碼且移除提示)
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
-      const pwd = prompt("請輸入密碼 (0841)");
-      if (pwd !== '0841') return alert("密碼錯誤");
+      
+      const pwd = prompt("請輸入密碼"); // 移除提示文字
+      if (pwd !== '22913577') return alert("密碼錯誤");
+      
       const batch = firebase.firestore().batch();
       checks.forEach(chk => {
         batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id));
@@ -282,8 +282,10 @@
 
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
-      const pwd = prompt("請輸入密碼 (0841)");
-      if (pwd !== '0841') return alert("密碼錯誤");
+      
+      const pwd = prompt("請輸入密碼"); // 移除提示文字
+      if (pwd !== '22913577') return alert("密碼錯誤");
+      
       firebase.firestore().collection("orders").get().then(snapshot => {
         const batch = firebase.firestore().batch();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -291,7 +293,7 @@
       }).then(() => showToast("全部清空成功"));
     });
 
-    // 匯出 Excel (已加入時間欄位)
+    // 匯出 Excel
     document.getElementById('exportButton').addEventListener('click', () => {
       let csv = "\uFEFFNo.,已繳費,姓名,餐點,價格,時間,備註\n"; 
       const rows = document.querySelectorAll('#orderTable tbody tr');
@@ -299,7 +301,6 @@
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
         const paid = cols[2].querySelector('input').checked ? '是' : '否';
-        // 欄位順序: 0:Chk, 1:No, 2:Paid, 3:Name, 4:Meal, 5:Price, 6:Time, 7:Note
         csv += `${i--},${paid},${cols[3].innerText},${cols[4].innerText},${cols[5].innerText},${cols[6].innerText},${cols[7].innerText}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
