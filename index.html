@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台中點餐系統 Ver2.0 (單機版)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    /* 樣式保持不變，直接沿用你原本優秀的設計 */
+    :root {
+      --primary-color: #7c9cbf;
+      --primary-dark: #5e86a9;
+      --secondary-color: #f6ae99;
+      --accent-color: #98c9b2;
+      --background-color: #f9f9f9;
+      --card-bg: #ffffff;
+      --text-color: #4a4a4a;
+      --text-light: #8b99a6;
+      --border-color: #e9ecef;
+      --success-color: #98c9b2;
+      --danger-color: #e5989b;
+      --warning-color: #f6c177;
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+      --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.06);
+      --radius: 20px;
+      --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+    .fullscreen-overlay.active { opacity: 1; visibility: visible; }
+    .fullscreen-image { max-width: 90%; max-height: 90%; object-fit: contain; box-shadow: 0 0 30px rgba(0, 0, 0, 0.3); transform: scale(0.9); transition: transform 0.3s ease; }
+    .fullscreen-overlay.active .fullscreen-image { transform: scale(1); }
+    .close-fullscreen { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; cursor: pointer; width: 50px; height: 50px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; }
+    .close-fullscreen:hover { background-color: var(--danger-color); transform: rotate(90deg); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans TC', sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: var(--background-color); color: var(--text-color); }
+    .container { max-width: 1320px; margin: 0 auto; padding: 40px 20px; position: relative; }
+    header { display: flex; flex-direction: column; align-items: center; margin-bottom: 50px; position: relative; }
+    .app-title { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); margin-bottom: 10px; text-align: center; position: relative; letter-spacing: -0.5px; }
+    .app-title:after { content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 60px; height: 3px; background-color: var(--secondary-color); border-radius: 10px; }
+    #datetime { font-size: 1.1rem; color: var(--text-light); font-weight: 500; margin-top: 15px; padding: 8px 20px; background-color: var(--card-bg); border-radius: 30px; box-shadow: var(--shadow); }
+    .content-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 35px; margin-bottom: 45px; }
+    .card { background-color: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px; transition: var(--transition); border: 1px solid rgba(230, 230, 230, 0.5); backdrop-filter: blur(10px); }
+    .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-7px); }
+    .card-header { display: flex; align-items: center; margin-bottom: 25px; }
+    .card-icon { font-size: 1.7rem; color: var(--primary-color); margin-right: 15px; background-color: rgba(124, 156, 191, 0.1); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .card-title { font-size: 1.5rem; font-weight: 600; color: var(--primary-color); margin: 0; letter-spacing: -0.5px; }
+    form { display: flex; flex-direction: column; }
+    .form-group { margin-bottom: 22px; position: relative; }
+    label { display: block; font-size: 0.95rem; font-weight: 500; margin-bottom: 8px; color: var(--text-light); }
+    input, textarea, select { width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 14px; font-size: 1rem; transition: var(--transition); background-color: var(--background-color); }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(124, 156, 191, 0.15); }
+    textarea { resize: vertical; min-height: 90px; }
+    .btn { padding: 14px 24px; border: none; border-radius: 16px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; }
+    .btn-icon { margin-right: 10px; }
+    .btn-primary { background-color: var(--primary-color); color: white; }
+    .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-3px); }
+    .btn-secondary { background-color: var(--secondary-color); color: white; }
+    .btn-secondary:hover { background-color: #f0a086; transform: translateY(-3px); }
+    .btn-danger { background-color: var(--danger-color); color: white; }
+    .btn-danger:hover { background-color: #e08587; transform: translateY(-3px); }
+    .btn-neutral { background-color: var(--text-light); color: white; }
+    .btn-neutral:hover { background-color: #7a8795; transform: translateY(-3px); }
+    .menu-container { width: 100%; height: 500px; margin: 0 auto 25px; position: relative; overflow: hidden; border-radius: var(--radius); box-shadow: var(--shadow); background-color: #f3f4f6; border: 1px solid rgba(230, 230, 230, 0.7); }
+    .menu-image { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; transition: var(--transition); }
+    .menu-image img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.3s ease; }
+    .menu-controls { display: flex; gap: 12px; flex-wrap: wrap; }
+    .file-upload { position: relative; overflow: hidden; margin-right: 10px; flex-grow: 1; }
+    .file-upload .btn { width: 100%; }
+    .file-upload input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 25px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    th, td { padding: 16px; text-align: left; }
+    th { background-color: var(--primary-color); color: white; font-weight: 500; letter-spacing: 0.3px; }
+    tbody tr { background-color: var(--card-bg); transition: var(--transition); }
+    tbody tr:nth-child(even) { background-color: #fafbfc; }
+    tbody tr:hover { background-color: #f1f5f9; }
+    td { border-bottom: 1px solid var(--border-color); }
+    tbody tr:last-child td { border-bottom: none; }
+    .checkbox-cell { text-align: center; width: 45px; }
+    .number-cell { width: 55px; text-align: center; }
+    .paid-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--success-color); }
+    .total-section { display: flex; flex-direction: column; align-items: flex-end; margin: 25px 0; }
+    #totalPrice { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); background-color: var(--card-bg); padding: 12px 25px; border-radius: 20px; box-shadow: var(--shadow); margin-bottom: 25px; border: 1px solid rgba(230, 230, 230, 0.7); }
+    .actions-section { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 40px; }
+    .badge { display: inline-block; padding: 6px 12px; font-size: 0.8rem; font-weight: 500; border-radius: 30px; margin-left: 12px; }
+    .badge-new { background-color: var(--accent-color); color: white; }
+    .glass-effect { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    .toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
+    .toast { padding: 16px 24px; border-radius: 18px; margin-bottom: 16px; color: white; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); display: flex; align-items: center; min-width: 300px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); animation: slideIn 0.3s ease forwards; }
+    .toast-icon { margin-right: 14px; font-size: 1.2rem; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    @media (max-width: 768px) { .content-wrapper { grid-template-columns: 1fr; } .card { padding: 25px; } .app-title { font-size: 2rem; } .actions-section { flex-direction: column; } .btn { width: 100%; } .menu-container { height: 400px; } table { font-size: 0.9rem; } th, td { padding: 12px 10px; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .card { animation: fadeIn 0.5s ease forwards; animation-delay: calc(var(--animation-order) * 0.1s); opacity: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="app-title">台中點餐系統 <span class="badge badge-new">單機版</span></h1>
+      <div id="datetime" class="glass-effect"></div>
+    </header>
+
+    <div class="content-wrapper">
+      <div class="card glass-effect" style="--animation-order: 1">
+        <div class="card-header">
+          <div class="card-icon"><i class="fas fa-utensils"></i></div>
+          <h2 class="card-title">訂餐表單</h2>
+        </div>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="name">您的姓名</label>
+            <input type="text" id="name" name="name" placeholder="請輸入您的姓名" required>
+          </div>
+          <div class="form-group">
+            <label for="meal">餐點名稱</label>
+            <input type="text" id="meal" name="meal" placeholder="請輸入餐點名稱" required>
+          </div>
+          <div class="form-group">
+            <label for="price">價格</label>
+            <input type="number" id="price" name="price" placeholder="請輸入價格" step="1" min="0" required>
+          </div>
+          <div class="form-group">
+            <label for="note">備註</label>
+            <textarea id="note" name="note" placeholder="如有特殊要求請填寫" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane btn-icon"></i>提交訂單
+          </button>
+        </form>
+      </div>
+
+      <div class="card glass-effect" style="--animation-order: 2">
+        <div class="card-header">
+          <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
+          <h2 class="card-title">今日菜單</h2>
+        </div>
+        <div class="menu-container">
+          <div class="menu-image">
+            <img id="menuImage" src="" alt="請上傳菜單" />
+            <div id="noMenuText" style="color: #8b99a6; text-align: center;">暫無菜單<br>請點擊下方上傳</div>
+          </div>
+        </div>
+        <div class="menu-controls">
+          <div class="file-upload">
+            <button id="changeImageButton" class="btn btn-secondary">
+              <i class="fas fa-upload btn-icon"></i>上傳菜單
+            </button>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass-effect" style="--animation-order: 3">
+      <div class="card-header">
+        <div class="card-icon"><i class="fas fa-list-alt"></i></div>
+        <h2 class="card-title">今日訂單</h2>
+      </div>
+
+      <div class="table-responsive">
+        <table id="orderTable">
+          <thead>
+            <tr>
+              <th class="checkbox-cell"></th>
+              <th class="number-cell">No.</th>
+              <th>已納費</th>
+              <th>姓名</th>
+              <th>餐點</th>
+              <th>價格</th>
+              <th>訂購時間</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="total-section">
+        <div id="totalPrice" class="glass-effect">總價格: $0.00</div>
+      </div>
+
+      <div class="actions-section">
+        <button id="exportButton" class="btn btn-primary">
+          <i class="fas fa-file-export btn-icon"></i>導出訂單為 Excel
+        </button>
+        <button id="clearButton" class="btn btn-danger">
+          <i class="fas fa-trash-alt btn-icon"></i>清除所有資訊
+        </button>
+        <button id="deleteSelectedButton" class="btn btn-secondary">
+          <i class="fas fa-minus-circle btn-icon"></i>刪除選中訂單
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+  <div id="fullscreenOverlay" class="fullscreen-overlay">
+    <img id="fullscreenImage" class="fullscreen-image" src="" alt="全螢幕菜單" />
+    <div id="closeFullscreen" class="close-fullscreen"><i class="fas fa-times"></i></div>
+  </div>
+
+  <script>
+    // 移除 Firebase 依賴，改用 LocalStorage
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeApp();
+    });
+
+    function initializeApp() {
+      updateDateTime();
+      loadOrders();
+      loadMenuImage();
+      setInterval(updateDateTime, 60000);
+      showToast('系統初始化成功 (單機模式)', 'success');
+    }
+
+    function showToast(message, type = 'success') {
+      const toastContainer = document.querySelector('.toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      if (type === 'success') {
+        toast.style.backgroundColor = 'rgba(152, 201, 178, 0.9)';
+        toast.innerHTML = `<i class="fas fa-check-circle toast-icon"></i>${message}`;
+      } else if (type === 'error') {
+        toast.style.backgroundColor = 'rgba(229, 152, 155, 0.9)';
+        toast.innerHTML = `<i class="fas fa-exclamation-circle toast-icon"></i>${message}`;
+      }
+      toastContainer.appendChild(toast);
+      setTimeout(() => { toast.style.animation = 'slideIn 0.3s forwards'; }, 10);
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s forwards';
+        setTimeout(() => { toastContainer.removeChild(toast); }, 300);
+      }, 3000);
+    }
+
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('datetime').textContent = now.toLocaleString('zh-TW', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+    }
+
+    // 訂單處理邏輯
+    function getOrders() {
+      return JSON.parse(localStorage.getItem('orders')) || [];
+    }
+
+    function saveOrders(orders) {
+      localStorage.setItem('orders', JSON.stringify(orders));
+      updateOrderTable(orders);
+    }
+
+    function loadOrders() {
+      updateOrderTable(getOrders());
+    }
+
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const orders = getOrders();
+      const newOrder = {
+        id: Date.now().toString(),
+        name: this.elements['name'].value,
+        meal: this.elements['meal'].value,
+        price: parseFloat(this.elements['price'].value),
+        note: this.elements['note'].value,
+        timestamp: Date.now(),
+        paid: false
+      };
+      orders.push(newOrder);
+      saveOrders(orders);
+      this.reset();
+      showToast('訂單已成功提交！');
+    });
+
+    function updateOrderTable(orders) {
+      orders.sort((a, b) => b.timestamp - a.timestamp);
+      const tbody = document.getElementById('orderTable').getElementsByTagName('tbody')[0];
+      tbody.innerHTML = '';
+      let totalPrice = 0;
+      
+      orders.forEach((order, index) => {
+        const row = tbody.insertRow();
+        const date = new Date(order.timestamp).toLocaleString('zh-TW', {
+          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+        if (order.paid) row.classList.add('paid-row'); // 簡單的樣式標記
+        
+        row.innerHTML = `
+          <td class="checkbox-cell"><input type="checkbox" data-id="${order.id}"></td>
+          <td class="number-cell">${index + 1}</td>
+          <td class="checkbox-container">
+            <input type="checkbox" class="paid-checkbox" ${order.paid ? 'checked' : ''} onchange="togglePayment('${order.id}', this.checked)">
+          </td>
+          <td>${order.name}</td>
+          <td>${order.meal}</td>
+          <td>$${order.price}</td>
+          <td>${date}</td>
+          <td>${order.note || '-'}</td>
+        `;
+        totalPrice += order.price;
+      });
+      document.getElementById('totalPrice').textContent = `總價格: $${totalPrice}`;
+    }
+
+    window.togglePayment = function(id, isPaid) {
+      const orders = getOrders();
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        order.paid = isPaid;
+        saveOrders(orders);
+        showToast(isPaid ? '已標記為已納費' : '已標記為未納費');
+      }
+    };
+
+    // 菜單圖片處理 (使用 Base64 儲存於 LocalStorage)
+    document.getElementById('changeImageButton').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // 檢查檔案大小 (限制 2MB 以免爆 LocalStorage)
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('圖片太大，請使用 2MB 以下的圖片', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64String = event.target.result;
+        localStorage.setItem('menuImage', base64String);
+        loadMenuImage();
+        showToast('菜單上傳成功');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function loadMenuImage() {
+      const imgData = localStorage.getItem('menuImage');
+      const imgElem = document.getElementById('menuImage');
+      const textElem = document.getElementById('noMenuText');
+      if (imgData) {
+        imgElem.src = imgData;
+        imgElem.style.display = 'block';
+        textElem.style.display = 'none';
+      } else {
+        imgElem.style.display = 'none';
+        textElem.style.display = 'block';
+      }
+    }
+
+    // 清除/刪除功能
+    document.getElementById('clearButton').addEventListener('click', function() {
+      if (confirm('確定要刪除所有訂單資訊嗎？')) {
+        const pwd = prompt('請輸入密碼：');
+        if (pwd === '0841') {
+          localStorage.removeItem('orders');
+          loadOrders();
+          showToast('所有訂單已清除');
+        } else { alert('密碼錯誤'); }
+      }
+    });
+
+    document.getElementById('deleteSelectedButton').addEventListener('click', function() {
+      const checkboxes = document.querySelectorAll('#orderTable tbody input[type="checkbox"]:checked');
+      if (checkboxes.length === 0) return alert('請選擇要刪除的訂單');
+      
+      if (confirm(`確定要刪除 ${checkboxes.length} 筆訂單？`)) {
+        const pwd = prompt('請輸入密碼：');
+        if (pwd === '0841') {
+          let orders = getOrders();
+          const idsToDelete = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
+          orders = orders.filter(o => !idsToDelete.includes(o.id));
+          saveOrders(orders);
+          showToast('已刪除選中訂單');
+        } else { alert('密碼錯誤'); }
+      }
+    });
+
+    // 匯出 Excel
+    document.getElementById('exportButton').addEventListener('click', function() {
+      const orders = getOrders();
+      let csv = "No.,已納費,姓名,餐點,價格,時間,備註\n";
+      orders.forEach((o, i) => {
+        const date = new Date(o.timestamp).toLocaleString('zh-TW');
+        csv += `${i+1},${o.paid?'是':'否'},${o.name},${o.meal},${o.price},${date},${o.note}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); // 注意：Excel 直接開可能亂碼，通常需加 BOM，但此處簡化
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `orders_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    });
+
+    // 全螢幕圖片
+    document.getElementById('menuImage').addEventListener('click', function() {
+      if(this.src && this.style.display !== 'none') {
+        document.getElementById('fullscreenImage').src = this.src;
+        document.getElementById('fullscreenOverlay').classList.add('active');
+      }
+    });
+    document.getElementById('closeFullscreen').addEventListener('click', () => {
+      document.getElementById('fullscreenOverlay').classList.remove('active');
+    });
+  </script>
+</body>
+</html>
