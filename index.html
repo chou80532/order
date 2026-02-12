@@ -7,12 +7,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
   <style>
-    /* 樣式區 (維持不變) */
+    /* 樣式區 */
     :root { --primary-color: #7c9cbf; --primary-dark: #5e86a9; --secondary-color: #f6ae99; --accent-color: #98c9b2; --background-color: #f9f9f9; --card-bg: #ffffff; --text-color: #4a4a4a; --text-light: #8b99a6; --border-color: #e9ecef; --success-color: #98c9b2; --danger-color: #e5989b; --shadow: 0 8px 30px rgba(0, 0, 0, 0.04); --radius: 20px; --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
-    .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s; }
+    
+    /* 圖片瀏覽器樣式 */
+    .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s; overflow: hidden; }
     .fullscreen-overlay.active { opacity: 1; visibility: visible; }
-    .fullscreen-image { max-width: 90%; max-height: 90%; object-fit: contain; }
-    .close-fullscreen { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; cursor: pointer; width: 50px; height: 50px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+    .fullscreen-image-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; cursor: grab; }
+    .fullscreen-image-container:active { cursor: grabbing; }
+    .fullscreen-image { max-width: 90%; max-height: 90%; object-fit: contain; transition: transform 0.1s ease-out; transform-origin: center center; }
+    .zoom-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 10001; }
+    .control-btn { color: white; font-size: 1.2rem; cursor: pointer; width: 45px; height: 45px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.3); transition: 0.2s; }
+    .control-btn:hover { background: var(--primary-color); border-color: var(--primary-color); }
+    .close-btn { background: rgba(229, 152, 155, 0.8); }
+    .close-btn:hover { background: var(--danger-color); }
+
+    /* ★★★ 新增：今日店家設定視窗 ★★★ */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 8000; display: none; justify-content: center; align-items: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .store-checkbox-list { max-height: 300px; overflow-y: auto; margin: 20px 0; border: 1px solid #eee; padding: 10px; border-radius: 10px; }
+    .store-checkbox-item { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; }
+    .store-checkbox-item:last-child { border-bottom: none; }
+    .store-checkbox-item input { width: 20px; height: 20px; margin-right: 10px; accent-color: var(--primary-color); }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Noto Sans TC', sans-serif; line-height: 1.6; background-color: var(--background-color); color: var(--text-color); }
     .container { max-width: 1320px; margin: 0 auto; padding: 40px 20px; }
@@ -36,7 +54,11 @@
     
     .store-selector { margin-bottom: 20px; }
     .store-selector select { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); border: 2px solid var(--primary-color); }
-    
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-box input { padding-left: 40px; border: 2px solid #ddd; transition: 0.3s; }
+    .search-box input:focus { border-color: var(--primary-color); }
+    .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; }
+
     .menu-display-area {
       position: relative;
       background: #f3f4f6;
@@ -49,45 +71,14 @@
       margin-bottom: 15px;
       border: 1px solid #eee;
     }
-    .menu-display-area img {
-      max-width: 100%;
-      max-height: 600px;
-      object-fit: contain;
-      cursor: pointer;
-    }
-    .nav-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(0,0,0,0.5);
-      color: white;
-      border: none;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 1.2rem;
-      transition: 0.2s;
-      z-index: 10;
-    }
+    .menu-display-area img { max-width: 100%; max-height: 600px; object-fit: contain; cursor: pointer; }
+    .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; transition: 0.2s; z-index: 10; }
     .nav-btn:hover { background: var(--primary-color); }
     .nav-prev { left: 10px; }
     .nav-next { right: 10px; }
-    
     .page-indicator { text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary-color); }
     
-    .menu-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 15px;
-      border: 1px solid #eee;
-    }
+    .menu-actions { display: flex; flex-direction: column; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #eee; }
     .action-row { display: flex; gap: 10px; align-items: center; }
 
     table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 25px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
@@ -123,9 +114,9 @@
           </div>
           
           <div class="form-group"><label>您的姓名</label><input type="text" id="name" required placeholder="例如：小明"></div>
-          <div class="form-group"><label>餐點名稱</label><input type="text" id="meal" required placeholder="例如：珍珠奶茶"></div>
+          <div class="form-group"><label>餐點名稱</label><input type="text" id="meal" required placeholder="例如：珍奶半糖微冰"></div>
           <div class="form-group"><label>價格</label><input type="number" id="price" required placeholder="例如：60"></div>
-          <div class="form-group"><label>備註</label><textarea id="note" rows="2" placeholder="例如：半糖微冰、不要豆芽菜"></textarea></div>
+          <div class="form-group"><label>備註</label><textarea id="note" rows="2" placeholder="備註事項"></textarea></div>
           <button type="submit" id="submitOrderBtn" class="btn btn-primary" disabled><i class="fas fa-paper-plane btn-icon"></i>送出訂單</button>
         </form>
       </div>
@@ -133,11 +124,22 @@
       <div class="card glass-effect">
         <div class="card-header">
           <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
-          <h2 class="card-title">今日菜單</h2>
+          <h2 class="card-title">店家菜單</h2>
+          <button class="btn btn-secondary" style="width: auto; margin-left: auto; font-size: 0.9rem; padding: 5px 15px;" onclick="openStoreSelector()">
+            <i class="fas fa-cog"></i> 設定今日店家
+          </button>
+        </div>
+
+        <div id="dailyStoreInfo" style="margin-bottom: 10px; color: #e5989b; font-weight: bold; display: none;">
+            <i class="fas fa-bullhorn"></i> 今日限定：<span id="dailyStoreList"></span>
         </div>
 
         <div class="store-selector">
             <label><i class="fas fa-filter"></i> 選擇店家菜單：</label>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="storeSearchInput" placeholder="輸入關鍵字搜尋店家..." autocomplete="off">
+            </div>
             <select id="storeSelect">
                 <option value="">-- 目前沒有菜單 --</option>
             </select>
@@ -145,7 +147,7 @@
         
         <div class="menu-display-area">
             <button class="nav-btn nav-prev" onclick="prevMenuPage()"><i class="fas fa-chevron-left"></i></button>
-            <img id="currentMenuImg" src="" alt="菜單" style="display:none;" />
+            <img id="currentMenuImg" src="" alt="菜單" style="display:none;" title="點擊可放大瀏覽" />
             <div id="noMenuText" style="color: #8b99a6; text-align: center;">暫無此店家的圖片</div>
             <button class="nav-btn nav-next" onclick="nextMenuPage()"><i class="fas fa-chevron-right"></i></button>
         </div>
@@ -219,9 +221,30 @@
   </div>
 
   <div class="toast-container"></div>
+  
   <div id="fullscreenOverlay" class="fullscreen-overlay">
-    <img id="fullscreenImage" class="fullscreen-image" src="" />
-    <div id="closeFullscreen" class="close-fullscreen"><i class="fas fa-times"></i></div>
+    <div class="zoom-controls">
+        <div class="control-btn" id="zoomInBtn" title="放大"><i class="fas fa-plus"></i></div>
+        <div class="control-btn" id="zoomOutBtn" title="縮小"><i class="fas fa-minus"></i></div>
+        <div class="control-btn" id="zoomResetBtn" title="還原"><i class="fas fa-compress"></i></div>
+        <div class="control-btn close-btn" id="closeFullscreen" title="關閉"><i class="fas fa-times"></i></div>
+    </div>
+    <div class="fullscreen-image-container" id="imgContainer">
+        <img id="fullscreenImage" class="fullscreen-image" src="" />
+    </div>
+  </div>
+
+  <div id="storeModal" class="modal-overlay">
+      <div class="modal-card">
+          <h2 style="color:var(--primary-color); margin-bottom:15px;">設定今日店家</h2>
+          <p style="color:#666; font-size:0.9rem;">請勾選今天要開放的店家 (可多選)：</p>
+          <div id="storeCheckboxList" class="store-checkbox-list">
+              </div>
+          <div style="display:flex; gap:10px;">
+              <button class="btn btn-primary" onclick="saveDailyStores()">儲存設定</button>
+              <button class="btn btn-secondary" style="background:#ccc;" onclick="closeStoreSelector()">取消</button>
+          </div>
+      </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -245,6 +268,7 @@
       showToast("系統連線成功！");
       listenToOrders();
       listenToMenuImages(); 
+      listenToDailySettings(); // 監聽今日店家設定
     } catch (e) {
       console.error(e);
       alert("連線失敗！" + e.message);
@@ -300,10 +324,8 @@
 
     document.getElementById('orderForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      
       const currentStore = document.getElementById('storeSelect').value;
       if (!currentStore) return alert("請先在右側選擇一家餐廳菜單！");
-
       const db = firebase.firestore();
       db.collection("orders").add({
         storeName: currentStore, 
@@ -330,6 +352,7 @@
     let allMenuData = []; 
     let currentStoreImages = []; 
     let currentMenuIndex = 0;
+    let dailyStores = []; // 今日限定店家列表
 
     function listenToMenuImages() {
       firebase.firestore().collection("menu_images").orderBy("timestamp", "asc").onSnapshot(snapshot => {
@@ -337,33 +360,88 @@
         snapshot.forEach(doc => {
           allMenuData.push({ id: doc.id, ...doc.data() });
         });
-        updateStoreDropdown();
-        filterMenuByStore();
+        updateStoreDropdown(); // 收到菜單後更新下拉
       });
     }
 
-    function updateStoreDropdown() {
+    // ★★★ 監聽今日設定 ★★★
+    function listenToDailySettings() {
+        firebase.firestore().collection("settings").doc("daily").onSnapshot(doc => {
+            if (doc.exists && doc.data().activeStores) {
+                dailyStores = doc.data().activeStores;
+                
+                // 更新 UI 顯示
+                const infoDiv = document.getElementById('dailyStoreInfo');
+                const listSpan = document.getElementById('dailyStoreList');
+                if (dailyStores.length > 0) {
+                    infoDiv.style.display = 'block';
+                    listSpan.innerText = dailyStores.join('、');
+                } else {
+                    infoDiv.style.display = 'none';
+                }
+            } else {
+                dailyStores = [];
+            }
+            updateStoreDropdown(); // 設定改變時，也要重新過濾下拉選單
+        });
+    }
+
+    // 更新店家選單 (整合今日限定 + 搜尋)
+    function updateStoreDropdown(searchTerm = "") {
       const select = document.getElementById('storeSelect');
       const currentVal = select.value;
+      
       const storeSet = new Set();
       allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); });
-      const stores = Array.from(storeSet);
-      select.innerHTML = '';
+      let stores = Array.from(storeSet);
       
+      // ★ 第一層過濾：如果是今日限定模式，只留下被勾選的店家
+      if (dailyStores.length > 0) {
+          stores = stores.filter(s => dailyStores.includes(s));
+      }
+
+      // ★ 第二層過濾：搜尋關鍵字
+      if (searchTerm) {
+        stores = stores.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+      }
+      
+      select.innerHTML = '';
       if (stores.length === 0) {
-          select.innerHTML = '<option value="">-- 目前沒有菜單 --</option>';
+          if(dailyStores.length > 0) {
+             select.innerHTML = '<option value="">-- 今日未開放此店家 --</option>';
+          } else {
+             select.innerHTML = '<option value="">-- 找不到店家 --</option>';
+          }
+      } else {
+        stores.forEach(store => {
+            const opt = document.createElement('option');
+            opt.value = store;
+            opt.innerText = store;
+            select.appendChild(opt);
+        });
+        
+        // 保持選中狀態
+        if (stores.includes(currentVal)) { 
+          select.value = currentVal; 
+        } else if (stores.length > 0) {
+          select.value = stores[0];
+          filterMenuByStore(); // 自動切換
+        }
+      }
+      
+      if(stores.length === 0) {
           document.getElementById('displayStoreName').innerText = "無店家";
           document.getElementById('submitOrderBtn').disabled = true;
-          return;
+          currentStoreImages = [];
+          renderCurrentMenu();
       }
-      stores.forEach(store => {
-          const opt = document.createElement('option');
-          opt.value = store;
-          opt.innerText = store;
-          select.appendChild(opt);
-      });
-      if (stores.includes(currentVal)) { select.value = currentVal; } else { select.value = stores[0]; }
     }
+
+    // 搜尋框監聽
+    document.getElementById('storeSearchInput').addEventListener('input', (e) => {
+        const term = e.target.value.trim();
+        updateStoreDropdown(term);
+    });
 
     document.getElementById('storeSelect').addEventListener('change', () => {
         filterMenuByStore();
@@ -428,7 +506,6 @@
       }
     }
 
-    // 密碼保護：刪除單頁菜單 (Base64)
     window.deleteCurrentMenuPage = function() {
       if (currentStoreImages.length === 0) return;
       const pwd = prompt("請輸入密碼");
@@ -440,7 +517,64 @@
         .catch(err => alert("刪除失敗: " + err.message));
     }
 
-    // 新增網址
+    // ★★★ 今日店家設定邏輯 ★★★
+    window.openStoreSelector = function() {
+        const pwd = prompt("請輸入管理者密碼");
+        if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
+
+        const listDiv = document.getElementById('storeCheckboxList');
+        listDiv.innerHTML = '';
+
+        // 找出所有店家
+        const storeSet = new Set();
+        allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); });
+        const allStores = Array.from(storeSet);
+
+        if (allStores.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; color:#999;">目前資料庫沒有任何店家</div>';
+        } else {
+            allStores.forEach(store => {
+                const div = document.createElement('div');
+                div.className = 'store-checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = store;
+                // 如果在今日名單中，預設打勾
+                if (dailyStores.includes(store)) checkbox.checked = true;
+
+                const label = document.createElement('label');
+                label.innerText = store;
+                label.style.marginBottom = '0';
+                label.style.cursor = 'pointer';
+                label.onclick = () => checkbox.click(); // 點字也可以勾
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                listDiv.appendChild(div);
+            });
+        }
+        
+        document.getElementById('storeModal').classList.add('open');
+    }
+
+    window.closeStoreSelector = function() {
+        document.getElementById('storeModal').classList.remove('open');
+    }
+
+    window.saveDailyStores = function() {
+        const checkboxes = document.querySelectorAll('#storeCheckboxList input[type="checkbox"]:checked');
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+        
+        firebase.firestore().collection("settings").doc("daily").set({
+            activeStores: selected
+        }).then(() => {
+            showToast("今日店家設定成功！");
+            closeStoreSelector();
+        }).catch(err => alert("儲存失敗: " + err.message));
+    }
+
+    // 上傳邏輯
     document.getElementById('addUrlBtn').addEventListener('click', () => {
         const storeName = document.getElementById('newStoreNameInput').value.trim();
         const url = document.getElementById('menuUrlInput').value;
@@ -460,7 +594,6 @@
         .catch(err => alert("新增失敗: " + err.message));
     });
 
-    // 上傳圖片
     document.getElementById('changeImageButton').addEventListener('click', () => {
       const storeName = document.getElementById('newStoreNameInput').value.trim();
       if (!storeName) return alert("請務必輸入「店家名稱」！");
@@ -471,12 +604,10 @@
       const storeName = document.getElementById('newStoreNameInput').value.trim();
       const file = e.target.files[0];
       if (!file) return;
-
       if (file.size > 950 * 1024) { 
         alert("圖片超過 950KB！請改用網址或壓縮後上傳。");
         return;
       }
-
       showToast("圖片上傳中...", "info");
       const reader = new FileReader();
       reader.onload = function(event) {
@@ -492,13 +623,11 @@
       reader.readAsDataURL(file);
     });
 
-    // 密碼保護：刪除選取
     document.getElementById('deleteSelectedButton').addEventListener('click', () => {
       const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked');
       if (checks.length === 0) return alert("請先勾選要刪除的項目");
       const pwd = prompt("請輸入密碼");
       if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
-      
       const batch = firebase.firestore().batch();
       checks.forEach(chk => {
         batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id));
@@ -506,12 +635,10 @@
       batch.commit().then(() => showToast("刪除成功"));
     });
 
-    // 密碼保護：全部清空
     document.getElementById('clearButton').addEventListener('click', () => {
       if (!confirm("確定要清空所有訂單嗎？")) return;
       const pwd = prompt("請輸入密碼");
       if (btoa(pwd) !== 'MjI5MTM1Nzc=') return alert("密碼錯誤");
-      
       firebase.firestore().collection("orders").get().then(snapshot => {
         const batch = firebase.firestore().batch();
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -544,16 +671,84 @@
       setTimeout(() => div.remove(), 3000);
     }
 
+    // 圖片縮放邏輯
+    let scale = 1;
+    let panning = false;
+    let pointX = 0;
+    let pointY = 0;
+    let startX = 0;
+    let startY = 0;
+    const imgOverlay = document.getElementById('fullscreenOverlay');
+    const fullImg = document.getElementById('fullscreenImage');
+    const container = document.getElementById('imgContainer');
+
     document.getElementById('currentMenuImg').addEventListener('click', function() {
       if(this.src) {
-        document.getElementById('fullscreenImage').src = this.src;
-        document.getElementById('fullscreenOverlay').classList.add('active');
+        fullImg.src = this.src;
+        imgOverlay.classList.add('active');
+        resetZoom();
       }
     });
+
     document.getElementById('closeFullscreen').addEventListener('click', () => {
-      document.getElementById('fullscreenOverlay').classList.remove('active');
+      imgOverlay.classList.remove('active');
     });
+
+    function setTransform() {
+      fullImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+    }
+
+    function resetZoom() {
+      scale = 1; pointX = 0; pointY = 0;
+      setTransform();
+    }
+
+    document.getElementById('zoomInBtn').onclick = () => { scale += 0.2; setTransform(); }
+    document.getElementById('zoomOutBtn').onclick = () => { if(scale > 0.4) scale -= 0.2; setTransform(); }
+    document.getElementById('zoomResetBtn').onclick = resetZoom;
+
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY * -0.001;
+      const newScale = Math.min(Math.max(.5, scale + delta), 4);
+      scale = newScale;
+      setTransform();
+    });
+
+    container.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startX = e.clientX - pointX;
+      startY = e.clientY - pointY;
+      panning = true;
+    });
+
+    container.addEventListener('mouseup', () => { panning = false; });
+    container.addEventListener('mouseleave', () => { panning = false; });
+
+    container.addEventListener('mousemove', (e) => {
+      if (!panning) return;
+      e.preventDefault();
+      pointX = e.clientX - startX;
+      pointY = e.clientY - startY;
+      setTransform();
+    });
+    
+    container.addEventListener('touchstart', (e) => {
+      if(e.touches.length === 1) {
+          startX = e.touches[0].clientX - pointX;
+          startY = e.touches[0].clientY - pointY;
+          panning = true;
+      }
+    });
+    container.addEventListener('touchend', () => { panning = false; });
+    container.addEventListener('touchmove', (e) => {
+       if(!panning) return;
+       if(scale > 1) e.preventDefault(); 
+       pointX = e.touches[0].clientX - startX;
+       pointY = e.touches[0].clientY - startY;
+       setTransform();
+    });
+
   </script>
 </body>
 </html>
-
