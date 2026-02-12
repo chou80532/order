@@ -106,9 +106,9 @@
           </div>
           
           <div class="form-group"><label>您的姓名</label><input type="text" id="name" required placeholder="例如：小明"></div>
-          <div class="form-group"><label>餐點名稱</label><input type="text" id="meal" required placeholder="例如：珍珠奶茶"></div>
+          <div class="form-group"><label>餐點名稱</label><input type="text" id="meal" required placeholder="例如：珍奶半糖微冰"></div>
           <div class="form-group"><label>價格</label><input type="number" id="price" required placeholder="例如：60"></div>
-          <div class="form-group"><label>備註</label><textarea id="note" rows="2" placeholder="例如：半糖微冰、不要豆芽菜"></textarea></div>
+          <div class="form-group"><label>備註</label><textarea id="note" rows="2" placeholder="備註事項"></textarea></div>
           <button type="submit" id="submitOrderBtn" class="btn btn-primary" disabled><i class="fas fa-paper-plane btn-icon"></i>送出訂單</button>
         </form>
       </div>
@@ -280,7 +280,7 @@
       const db = firebase.firestore();
       console.log("Firebase 連線成功");
       showToast("系統連線成功！");
-      listenToOrders(); // 監聽所有訂單 (含分組邏輯)
+      listenToOrders(); 
       listenToMenuImages(); 
       listenToDailySettings(); 
       initDatePickers(); 
@@ -306,30 +306,25 @@
         document.getElementById('exportStartDate').value = lastWeek.toISOString().split('T')[0];
     }
 
-    // ★★★ 訂單監聽 (自動依照日期分組，新日期在最上方) ★★★
     function listenToOrders() {
       const db = firebase.firestore();
-      // 抓取所有訂單，依照時間倒序 (最新的在最前面)
       db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
         const tbody = document.querySelector('#orderTable tbody');
         let htmlContent = '';
         let todayTotal = 0;
         let index = snapshot.docs.length; 
         
-        let lastDateHeader = null; // 用來記錄已經出現過的日期標題
-        const todayStr = new Date().toLocaleDateString('zh-TW'); // 今天日期的字串 (例如 2026/2/12)
+        let lastDateHeader = null; 
+        const todayStr = new Date().toLocaleDateString('zh-TW');
 
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
           const dateObj = new Date(data.timestamp);
-          const dateStr = dateObj.toLocaleDateString('zh-TW'); // 取得這筆訂單的日期
+          const dateStr = dateObj.toLocaleDateString('zh-TW'); 
           
-          // 如果這筆訂單的日期，跟上一個標題不一樣，代表換了一天，要插入標題
           if (dateStr !== lastDateHeader) {
               const dayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
               const dayName = dayNames[dateObj.getDay()];
-              
-              // 插入日期分隔列
               htmlContent += `
                 <tr class="date-header">
                     <td colspan="8">📅 ${dateStr} (${dayName})</td>
@@ -338,14 +333,12 @@
               lastDateHeader = dateStr;
           }
 
-          // 判斷是否為今天的訂單
           const isToday = (dateStr === todayStr);
           if (isToday) todayTotal += Number(data.price);
 
           const timeStr = dateObj.toLocaleString('zh-TW', {hour: '2-digit', minute: '2-digit', hour12: false});
           const storeDisplay = data.storeName ? `<span style="background:#eef5f9; padding:2px 6px; border-radius:4px; color:#5e86a9; font-size:0.9em;">${data.storeName}</span>` : '<span style="color:#ccc;">-</span>';
           
-          // 如果不是今天，加上 past-order 樣式讓字變淡
           const rowClass = isToday ? '' : 'past-order';
 
           htmlContent += `
@@ -445,36 +438,373 @@
           .catch(err => alert("清理失敗: " + err.message));
     });
 
-    let allMenuData = []; let currentStoreImages = []; let currentMenuIndex = 0; let dailyStores = []; 
-    function listenToMenuImages() { firebase.firestore().collection("menu_images").orderBy("timestamp", "asc").onSnapshot(snapshot => { allMenuData = []; snapshot.forEach(doc => { allMenuData.push({ id: doc.id, ...doc.data() }); }); updateStoreDropdown(); }); }
-    function listenToDailySettings() { firebase.firestore().collection("settings").doc("daily").onSnapshot(doc => { if (doc.exists && doc.data().activeStores) { dailyStores = doc.data().activeStores; const infoDiv = document.getElementById('dailyStoreInfo'); const listSpan = document.getElementById('dailyStoreList'); if (dailyStores.length > 0) { infoDiv.style.display = 'block'; listSpan.innerText = dailyStores.join('、'); } else { infoDiv.style.display = 'none'; } } else { dailyStores = []; } updateStoreDropdown(); }); }
+    let allMenuData = []; 
+    let currentStoreImages = []; 
+    let currentMenuIndex = 0; 
+    let dailyStores = []; 
+
+    function listenToMenuImages() { 
+        firebase.firestore().collection("menu_images").orderBy("timestamp", "asc").onSnapshot(snapshot => { 
+            allMenuData = []; 
+            snapshot.forEach(doc => { 
+                allMenuData.push({ id: doc.id, ...doc.data() }); 
+            }); 
+            updateStoreDropdown(); 
+        }); 
+    }
+
+    function listenToDailySettings() { 
+        firebase.firestore().collection("settings").doc("daily").onSnapshot(doc => { 
+            if (doc.exists && doc.data().activeStores) { 
+                dailyStores = doc.data().activeStores; 
+                const infoDiv = document.getElementById('dailyStoreInfo'); 
+                const listSpan = document.getElementById('dailyStoreList'); 
+                if (dailyStores.length > 0) { 
+                    infoDiv.style.display = 'block'; 
+                    listSpan.innerText = dailyStores.join('、'); 
+                } else { 
+                    infoDiv.style.display = 'none'; 
+                } 
+            } else { 
+                dailyStores = []; 
+            } 
+            updateStoreDropdown(); 
+        }); 
+    }
+
     function updateStoreDropdown(searchTerm = "") {
-      const select = document.getElementById('storeSelect'); const currentVal = select.value; const storeSet = new Set(); allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); }); let stores = Array.from(storeSet);
+      const select = document.getElementById('storeSelect'); 
+      const currentVal = select.value; 
+      const storeSet = new Set(); 
+      allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); }); 
+      let stores = Array.from(storeSet);
       if (dailyStores.length > 0) { stores = stores.filter(s => dailyStores.includes(s)); }
       if (searchTerm) { stores = stores.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase())); }
+      
       select.innerHTML = '';
-      if (stores.length === 0) { if(dailyStores.length > 0) select.innerHTML = '<option value="">-- 今日未開放此店家 --</option>'; else select.innerHTML = '<option value="">-- 找不到店家 --</option>'; } 
-      else { stores.forEach(store => { const opt = document.createElement('option'); opt.value = store; opt.innerText = store; select.appendChild(opt); }); if (stores.includes(currentVal)) { select.value = currentVal; } else if (stores.length > 0) { select.value = stores[0]; filterMenuByStore(); } }
-      if(stores.length === 0) { document.getElementById('displayStoreName').innerText = "無店家"; document.getElementById('submitOrderBtn').disabled = true; currentStoreImages = []; renderCurrentMenu(); }
+      if (stores.length === 0) { 
+          if(dailyStores.length > 0) select.innerHTML = '<option value="">-- 今日未開放此店家 --</option>'; 
+          else select.innerHTML = '<option value="">-- 找不到店家 --</option>'; 
+      } else { 
+          stores.forEach(store => { 
+              const opt = document.createElement('option'); 
+              opt.value = store; 
+              opt.innerText = store; 
+              select.appendChild(opt); 
+          }); 
+          if (stores.includes(currentVal)) { select.value = currentVal; } 
+          else if (stores.length > 0) { select.value = stores[0]; filterMenuByStore(); } 
+      }
+      if(stores.length === 0) { 
+          document.getElementById('displayStoreName').innerText = "無店家"; 
+          document.getElementById('submitOrderBtn').disabled = true; 
+          currentStoreImages = []; 
+          renderCurrentMenu(); 
+      }
     }
-    document.getElementById('storeSearchInput').addEventListener('input', (e) => { const term = e.target.value.trim(); updateStoreDropdown(term); });
+
+    document.getElementById('storeSearchInput').addEventListener('input', (e) => { 
+        const term = e.target.value.trim(); 
+        updateStoreDropdown(term); 
+    });
+
     document.getElementById('storeSelect').addEventListener('change', () => { filterMenuByStore(); });
-    function filterMenuByStore() { const select = document.getElementById('storeSelect'); const selectedStore = select.value; if (!selectedStore) { currentStoreImages = []; document.getElementById('displayStoreName').innerText = "無店家"; document.getElementById('submitOrderBtn').disabled = true; } else { currentStoreImages = allMenuData.filter(d => d.storeName === selectedStore); document.getElementById('displayStoreName').innerText = selectedStore; document.getElementById('displayStoreName').style.color = "#e67e22"; document.getElementById('submitOrderBtn').disabled = false; } currentMenuIndex = 0; renderCurrentMenu(); }
-    function renderCurrentMenu() { const imgEl = document.getElementById('currentMenuImg'); const noText = document.getElementById('noMenuText'); const indicator = document.getElementById('pageIndicator'); const delBtn = document.getElementById('deleteCurrentPageBtn'); const navPrev = document.querySelector('.nav-prev'); const navNext = document.querySelector('.nav-next'); if (currentStoreImages.length === 0) { imgEl.style.display = 'none'; imgEl.src = ''; noText.style.display = 'block'; indicator.textContent = '第 0 / 0 頁'; delBtn.style.display = 'none'; navPrev.style.display = 'none'; navNext.style.display = 'none'; } else { const data = currentStoreImages[currentMenuIndex]; imgEl.src = data.url; imgEl.style.display = 'block'; noText.style.display = 'none'; indicator.textContent = `第 ${currentMenuIndex + 1} / ${currentStoreImages.length} 頁`; delBtn.style.display = 'inline-block'; navPrev.style.display = 'flex'; navNext.style.display = 'flex'; } }
-    window.prevMenuPage = function() { if (currentStoreImages.length > 0) { currentMenuIndex = (currentMenuIndex - 1 + currentStoreImages.length) % currentStoreImages.length; renderCurrentMenu(); } }
-    window.nextMenuPage = function() { if (currentStoreImages.length > 0) { currentMenuIndex = (currentMenuIndex + 1) % currentStoreImages.length; renderCurrentMenu(); } }
-    window.deleteCurrentMenuPage = function() { if (currentStoreImages.length === 0) return; const pwd = prompt("請輸入密碼"); if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); const docId = currentStoreImages[currentMenuIndex].id; firebase.firestore().collection("menu_images").doc(docId).delete().then(() => showToast("已刪除此頁菜單")).catch(err => alert("刪除失敗: " + err.message)); }
-    window.openStoreSelector = function() { const pwd = prompt("請輸入管理者密碼"); if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); const listDiv = document.getElementById('storeCheckboxList'); const searchInput = document.getElementById('storeSelectorSearchInput'); listDiv.innerHTML = ''; searchInput.value = ''; const storeSet = new Set(); allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); }); const allStores = Array.from(storeSet); if (allStores.length === 0) { listDiv.innerHTML = '<div style="text-align:center; color:#999;">目前資料庫沒有任何店家</div>'; } else { allStores.forEach(store => { const div = document.createElement('div'); div.className = 'store-checkbox-item'; const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = store; if (dailyStores.includes(store)) checkbox.checked = true; const label = document.createElement('label'); label.innerText = store; label.style.marginBottom = '0'; label.style.cursor = 'pointer'; label.onclick = () => checkbox.click(); div.appendChild(checkbox); div.appendChild(label); listDiv.appendChild(div); }); } document.getElementById('storeModal').classList.add('open'); }
-    document.getElementById('storeSelectorSearchInput').addEventListener('input', function(e) { const term = e.target.value.toLowerCase(); const items = document.querySelectorAll('.store-checkbox-item'); items.forEach(item => { const text = item.innerText.toLowerCase(); if (term === '' || text.includes(term)) { item.style.display = 'flex'; } else { item.style.display = 'none'; } }); });
+
+    function filterMenuByStore() { 
+        const select = document.getElementById('storeSelect'); 
+        const selectedStore = select.value; 
+        if (!selectedStore) { 
+            currentStoreImages = []; 
+            document.getElementById('displayStoreName').innerText = "無店家"; 
+            document.getElementById('submitOrderBtn').disabled = true; 
+        } else { 
+            currentStoreImages = allMenuData.filter(d => d.storeName === selectedStore); 
+            document.getElementById('displayStoreName').innerText = selectedStore; 
+            document.getElementById('displayStoreName').style.color = "#e67e22"; 
+            document.getElementById('submitOrderBtn').disabled = false; 
+        } 
+        currentMenuIndex = 0; 
+        renderCurrentMenu(); 
+    }
+
+    function renderCurrentMenu() { 
+        const imgEl = document.getElementById('currentMenuImg'); 
+        const noText = document.getElementById('noMenuText'); 
+        const indicator = document.getElementById('pageIndicator'); 
+        const delBtn = document.getElementById('deleteCurrentPageBtn'); 
+        const navPrev = document.querySelector('.nav-prev'); 
+        const navNext = document.querySelector('.nav-next'); 
+        if (currentStoreImages.length === 0) { 
+            imgEl.style.display = 'none'; 
+            imgEl.src = ''; 
+            noText.style.display = 'block'; 
+            indicator.textContent = '第 0 / 0 頁'; 
+            delBtn.style.display = 'none'; 
+            navPrev.style.display = 'none'; 
+            navNext.style.display = 'none'; 
+        } else { 
+            const data = currentStoreImages[currentMenuIndex]; 
+            imgEl.src = data.url; 
+            imgEl.style.display = 'block'; 
+            noText.style.display = 'none'; 
+            indicator.textContent = `第 ${currentMenuIndex + 1} / ${currentStoreImages.length} 頁`; 
+            delBtn.style.display = 'inline-block'; 
+            navPrev.style.display = 'flex'; 
+            navNext.style.display = 'flex'; 
+        } 
+    }
+
+    window.prevMenuPage = function() { 
+        if (currentStoreImages.length > 0) { 
+            currentMenuIndex = (currentMenuIndex - 1 + currentStoreImages.length) % currentStoreImages.length; 
+            renderCurrentMenu(); 
+        } 
+    }
+
+    window.nextMenuPage = function() { 
+        if (currentStoreImages.length > 0) { 
+            currentMenuIndex = (currentMenuIndex + 1) % currentStoreImages.length; 
+            renderCurrentMenu(); 
+        } 
+    }
+
+    window.deleteCurrentMenuPage = function() { 
+        if (currentStoreImages.length === 0) return; 
+        const pwd = prompt("請輸入密碼"); 
+        if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); 
+        const docId = currentStoreImages[currentMenuIndex].id; 
+        firebase.firestore().collection("menu_images").doc(docId).delete()
+            .then(() => showToast("已刪除此頁菜單"))
+            .catch(err => alert("刪除失敗: " + err.message)); 
+    }
+
+    window.openStoreSelector = function() { 
+        const pwd = prompt("請輸入管理者密碼"); 
+        if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); 
+        const listDiv = document.getElementById('storeCheckboxList'); 
+        const searchInput = document.getElementById('storeSelectorSearchInput'); 
+        listDiv.innerHTML = ''; 
+        searchInput.value = ''; 
+        const storeSet = new Set(); 
+        allMenuData.forEach(d => { if(d.storeName) storeSet.add(d.storeName); }); 
+        const allStores = Array.from(storeSet); 
+        if (allStores.length === 0) { 
+            listDiv.innerHTML = '<div style="text-align:center; color:#999;">目前資料庫沒有任何店家</div>'; 
+        } else { 
+            allStores.forEach(store => { 
+                const div = document.createElement('div'); 
+                div.className = 'store-checkbox-item'; 
+                const checkbox = document.createElement('input'); 
+                checkbox.type = 'checkbox'; 
+                checkbox.value = store; 
+                if (dailyStores.includes(store)) checkbox.checked = true; 
+                const label = document.createElement('label'); 
+                label.innerText = store; 
+                label.style.marginBottom = '0'; 
+                label.style.cursor = 'pointer'; 
+                label.onclick = () => checkbox.click(); 
+                div.appendChild(checkbox); 
+                div.appendChild(label); 
+                listDiv.appendChild(div); 
+            }); 
+        } 
+        document.getElementById('storeModal').classList.add('open'); 
+    }
+
+    document.getElementById('storeSelectorSearchInput').addEventListener('input', function(e) { 
+        const term = e.target.value.toLowerCase(); 
+        const items = document.querySelectorAll('.store-checkbox-item'); 
+        items.forEach(item => { 
+            const text = item.innerText.toLowerCase(); 
+            if (term === '' || text.includes(term)) { 
+                item.style.display = 'flex'; 
+            } else { 
+                item.style.display = 'none'; 
+            } 
+        }); 
+    });
+
     window.closeStoreSelector = function() { document.getElementById('storeModal').classList.remove('open'); }
-    window.saveDailyStores = function() { const checkboxes = document.querySelectorAll('#storeCheckboxList input[type="checkbox"]:checked'); const selected = Array.from(checkboxes).map(cb => cb.value); firebase.firestore().collection("settings").doc("daily").set({ activeStores: selected }).then(() => { showToast("今日店家設定成功！"); closeStoreSelector(); }).catch(err => alert("儲存失敗: " + err.message)); }
-    document.getElementById('addUrlBtn').addEventListener('click', () => { const storeName = document.getElementById('newStoreNameInput').value.trim(); const url = document.getElementById('menuUrlInput').value; if (!storeName) return alert("請務必輸入「店家名稱」！"); if (!url) return alert("請貼上網址！"); showToast("新增中...", "info"); firebase.firestore().collection("menu_images").add({ storeName: storeName, url: url, timestamp: Date.now() }).then(() => { showToast("新增成功！"); document.getElementById('menuUrlInput').value = ''; }).catch(err => alert("新增失敗: " + err.message)); });
-    document.getElementById('changeImageButton').addEventListener('click', () => { const storeName = document.getElementById('newStoreNameInput').value.trim(); if (!storeName) return alert("請務必輸入「店家名稱」！"); document.getElementById('fileInput').click(); });
-    document.getElementById('fileInput').addEventListener('change', function(e) { const storeName = document.getElementById('newStoreNameInput').value.trim(); const file = e.target.files[0]; if (!file) return; if (file.size > 950 * 1024) { return alert("圖片超過 950KB！請改用網址或壓縮後上傳。"); } showToast("圖片上傳中...", "info"); const reader = new FileReader(); reader.onload = function(event) { const base64String = event.target.result; firebase.firestore().collection("menu_images").add({ storeName: storeName, url: base64String, timestamp: Date.now() }).then(() => { showToast("上傳成功！"); }).catch(err => alert("上傳失敗: " + err.message)); }; reader.readAsDataURL(file); });
-    document.getElementById('deleteSelectedButton').addEventListener('click', () => { const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked'); if (checks.length === 0) return alert("請先勾選要刪除的項目"); const pwd = prompt("請輸入密碼"); if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); const batch = firebase.firestore().batch(); checks.forEach(chk => { batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id)); }); batch.commit().then(() => showToast("刪除成功")); });
-    document.getElementById('clearButton').addEventListener('click', () => { if (!confirm("確定要清空今天的訂單嗎？(舊資料不會消失)")) return; const pwd = prompt("請輸入密碼"); if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); const checks = document.querySelectorAll('#orderTable input[type="checkbox"]'); const batch = firebase.firestore().batch(); checks.forEach(chk => { batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id)); }); batch.commit().then(() => showToast("今日訂單已清空")); });
-    function showToast(msg, type="success") { const container = document.querySelector('.toast-container'); const div = document.createElement('div'); div.className = 'toast'; div.innerText = msg; container.appendChild(div); setTimeout(() => div.remove(), 3000); }
-    let scale = 1; let panning = false; let pointX = 0; let pointY = 0; let startX = 0; let startY = 0; const imgOverlay = document.getElementById('fullscreenOverlay'); const fullImg = document.getElementById('fullscreenImage'); const container = document.getElementById('imgContainer'); document.getElementById('currentMenuImg').addEventListener('click', function() { if(this.src) { fullImg.src = this.src; imgOverlay.classList.add('active'); resetZoom(); } }); document.getElementById('closeFullscreen').addEventListener('click', () => { imgOverlay.classList.remove('active'); }); function setTransform() { fullImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; } function resetZoom() { scale = 1; pointX = 0; pointY = 0; setTransform(); } document.getElementById('zoomInBtn').onclick = () => { scale += 0.2; setTransform(); } document.getElementById('zoomOutBtn').onclick = () => { if(scale > 0.4) scale -= 0.2; setTransform(); } document.getElementById('zoomResetBtn').onclick = resetZoom; container.addEventListener('wheel', (e) => { e.preventDefault(); const delta = e.deltaY * -0.001; scale = Math.min(Math.max(.5, scale + delta), 4); setTransform(); }); container.addEventListener('mousedown', (e) => { e.preventDefault(); startX = e.clientX - pointX; startY = e.clientY - pointY; panning = true; }); container.addEventListener('mouseup', () => { panning = false; }); container.addEventListener('mouseleave', () => { panning = false; }); container.addEventListener('mousemove', (e) => { if (!panning) return; e.preventDefault(); pointX = e.clientX - startX; pointY = e.clientY - startY; setTransform(); }); container.addEventListener('touchstart', (e) => { if(e.touches.length === 1) { startX = e.touches[0].clientX - pointX; startY = e.touches[0].clientY - pointY; panning = true; } }); container.addEventListener('touchend', () => { panning = false; }); container.addEventListener('touchmove', (e) => { if(!panning) return; if(scale > 1) e.preventDefault(); pointX = e.touches[0].clientX - startX; pointY = e.touches[0].clientY - startY; setTransform(); });
+
+    window.saveDailyStores = function() { 
+        const checkboxes = document.querySelectorAll('#storeCheckboxList input[type="checkbox"]:checked'); 
+        const selected = Array.from(checkboxes).map(cb => cb.value); 
+        firebase.firestore().collection("settings").doc("daily").set({ activeStores: selected })
+            .then(() => { 
+                showToast("今日店家設定成功！"); 
+                closeStoreSelector(); 
+            })
+            .catch(err => alert("儲存失敗: " + err.message)); 
+    }
+
+    document.getElementById('addUrlBtn').addEventListener('click', () => { 
+        const storeName = document.getElementById('newStoreNameInput').value.trim(); 
+        const url = document.getElementById('menuUrlInput').value; 
+        if (!storeName) return alert("請務必輸入「店家名稱」！"); 
+        if (!url) return alert("請貼上網址！"); 
+        showToast("新增中...", "info"); 
+        firebase.firestore().collection("menu_images").add({ 
+            storeName: storeName, 
+            url: url, 
+            timestamp: Date.now() 
+        })
+        .then(() => { 
+            showToast("新增成功！"); 
+            document.getElementById('menuUrlInput').value = ''; 
+        })
+        .catch(err => alert("新增失敗: " + err.message)); 
+    });
+
+    document.getElementById('changeImageButton').addEventListener('click', () => { 
+        const storeName = document.getElementById('newStoreNameInput').value.trim(); 
+        if (!storeName) return alert("請務必輸入「店家名稱」！"); 
+        document.getElementById('fileInput').click(); 
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(e) { 
+        const storeName = document.getElementById('newStoreNameInput').value.trim(); 
+        const file = e.target.files[0]; 
+        if (!file) return; 
+        if (file.size > 950 * 1024) { 
+            return alert("圖片超過 950KB！請改用網址或壓縮後上傳。"); 
+        } 
+        showToast("圖片上傳中...", "info"); 
+        const reader = new FileReader(); 
+        reader.onload = function(event) { 
+            const base64String = event.target.result; 
+            firebase.firestore().collection("menu_images").add({ 
+                storeName: storeName, 
+                url: base64String, 
+                timestamp: Date.now() 
+            })
+            .then(() => { showToast("上傳成功！"); })
+            .catch(err => alert("上傳失敗: " + err.message)); 
+        }; 
+        reader.readAsDataURL(file); 
+    });
+
+    document.getElementById('deleteSelectedButton').addEventListener('click', () => { 
+        const checks = document.querySelectorAll('#orderTable input[type="checkbox"]:checked'); 
+        if (checks.length === 0) return alert("請先勾選要刪除的項目"); 
+        const pwd = prompt("請輸入密碼"); 
+        if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); 
+        const batch = firebase.firestore().batch(); 
+        checks.forEach(chk => { 
+            batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id)); 
+        }); 
+        batch.commit().then(() => showToast("刪除成功")); 
+    });
+
+    document.getElementById('clearButton').addEventListener('click', () => { 
+        if (!confirm("確定要清空今天的訂單嗎？(舊資料不會消失)")) return; 
+        const pwd = prompt("請輸入密碼"); 
+        if (btoa(pwd) !== 'MjI5MQ==') return alert("密碼錯誤"); 
+        const checks = document.querySelectorAll('#orderTable input[type="checkbox"]'); 
+        const batch = firebase.firestore().batch(); 
+        checks.forEach(chk => { 
+            batch.delete(firebase.firestore().collection("orders").doc(chk.dataset.id)); 
+        }); 
+        batch.commit().then(() => showToast("今日訂單已清空")); 
+    });
+
+    function showToast(msg, type="success") { 
+        const container = document.querySelector('.toast-container'); 
+        const div = document.createElement('div'); 
+        div.className = 'toast'; 
+        div.innerText = msg; 
+        container.appendChild(div); 
+        setTimeout(() => div.remove(), 3000); 
+    }
+
+    // 圖片縮放與拖曳 (完整展開，避免複製錯誤)
+    let scale = 1; 
+    let panning = false; 
+    let pointX = 0; 
+    let pointY = 0; 
+    let startX = 0; 
+    let startY = 0; 
+    
+    const imgOverlay = document.getElementById('fullscreenOverlay'); 
+    const fullImg = document.getElementById('fullscreenImage'); 
+    const container = document.getElementById('imgContainer'); 
+    
+    document.getElementById('currentMenuImg').addEventListener('click', function() { 
+        if(this.src) { 
+            fullImg.src = this.src; 
+            imgOverlay.classList.add('active'); 
+            resetZoom(); 
+        } 
+    }); 
+    
+    document.getElementById('closeFullscreen').addEventListener('click', () => { 
+        imgOverlay.classList.remove('active'); 
+    }); 
+    
+    function setTransform() { 
+        fullImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; 
+    } 
+    
+    function resetZoom() { 
+        scale = 1; 
+        pointX = 0; 
+        pointY = 0; 
+        setTransform(); 
+    } 
+    
+    document.getElementById('zoomInBtn').onclick = () => { 
+        scale += 0.2; 
+        setTransform(); 
+    } 
+    
+    document.getElementById('zoomOutBtn').onclick = () => { 
+        if(scale > 0.4) scale -= 0.2; 
+        setTransform(); 
+    } 
+    
+    document.getElementById('zoomResetBtn').onclick = resetZoom; 
+    
+    container.addEventListener('wheel', (e) => { 
+        e.preventDefault(); 
+        const delta = e.deltaY * -0.001; 
+        scale = Math.min(Math.max(.5, scale + delta), 4); 
+        setTransform(); 
+    }); 
+    
+    container.addEventListener('mousedown', (e) => { 
+        e.preventDefault(); 
+        startX = e.clientX - pointX; 
+        startY = e.clientY - pointY; 
+        panning = true; 
+    }); 
+    
+    container.addEventListener('mouseup', () => { panning = false; }); 
+    container.addEventListener('mouseleave', () => { panning = false; }); 
+    
+    container.addEventListener('mousemove', (e) => { 
+        if (!panning) return; 
+        e.preventDefault(); 
+        pointX = e.clientX - startX; 
+        pointY = e.clientY - startY; 
+        setTransform(); 
+    }); 
+    
+    container.addEventListener('touchstart', (e) => { 
+        if(e.touches.length === 1) { 
+            startX = e.touches[0].clientX - pointX; 
+            startY = e.touches[0].clientY - pointY; 
+            panning = true; 
+        } 
+    }); 
+    
+    container.addEventListener('touchend', () => { panning = false; }); 
+    
+    container.addEventListener('touchmove', (e) => { 
+        if(!panning) return; 
+        if(scale > 1) e.preventDefault(); 
+        pointX = e.touches[0].clientX - startX; 
+        pointY = e.touches[0].clientY - startY; 
+        setTransform(); 
+    });
   </script>
 </body>
 </html>
